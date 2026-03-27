@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0A0A14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Mis Finanzas Pro">
+    <title>Mis Finanzas Pro</title>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="./icons/icon-167.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #00D4AA;
+            --bg-dark: #0A0A14;
+            --bg-card: #1A1A2E;
+            --bg-input: #2D2D44;
+            --text-primary: #FFFFFF;
+            --text-secondary: #999999;
+            --danger: #FF6B6B;
+            --purple: #6C5CE7;
+        }
+        
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .safe-top {
+            padding-top: max(20px, env(safe-area-inset-top));
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 16px;
+            padding-bottom: 100px;
+            min-height: calc(100vh - 85px);
+            overflow-y: auto;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-top: 1px solid var(--bg-input);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            padding-bottom: max(25px, env(safe-area-inset-bottom));
+            z-index: 1000;
+        }
+        
+        .tab-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 16px;
+            transition: color 0.2s;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+        }
+        
+        .tab-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .input-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .input-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+            flex: 1;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            background: var(--bg-input);
+            border-radius: 8px;
+            padding: 0 12px;
+            min-width: 120px;
+        }
+        
+        .input-field {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            padding: 10px 0;
+            text-align: right;
+            width: 100%;
+            outline: none;
+        }
+        
+        .input-field::placeholder {
+            color: #444;
+        }
+        
+        .euro-symbol {
+            color: var(--primary);
+            font-size: 16px;
+            margin-left: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .net-card {
+            background: rgba(0, 212, 170, 0.1);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .net-value {
+            color: var(--primary);
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .irpf-card {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .account-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .month-selector {
+            display: flex;
+            align-items: center;
+            background: var(--bg-card);
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            cursor: pointer;
+        }
+        
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .month-btn {
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--bg-input);
+            border: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .month-btn.active {
+            background: var(--primary);
+            color: var(--bg-dark);
+            font-weight: bold;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .table-header {
+            display: flex;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--bg-input);
+            margin-bottom: 8px;
+        }
+        
+        .table-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--bg-input);
+        }
+        
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            padding: 8px;
+        }
+        
+        .sync-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .export-btn {
+            background: var(--primary);
+            color: var(--bg-dark);
+            border: none;
+        }
+        
+        .import-btn {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .year-selector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .year-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 28px;
+            cursor: pointer;
+            padding: 8px;
+        }
+        
+        .year-text {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .settings-panel {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .settings-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            background: var(--bg-card);
+            border: none;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Tab: Nómina -->
+    <div id="tab-nomina" class="tab-content active safe-top">
+        <h1 style="font-size: 32px; font-weight: bold; margin-bottom: 4px;">Nómina</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Simulador de Nómina</p>
+        
+        <!-- Month Selector -->
+        <div class="month-selector" onclick="toggleMonthPicker()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" style="color: var(--primary);" stroke-width="2">
+                <rect x="3" y="4" width="14" height="14" rx="2"/><line x1="3" y1="8" x2="17" y2="8"/>
+            </svg>
+            <span id="selected-date" style="flex: 1; margin-left: 10px; font-weight: 600;">Julio 2025</span>
+            <svg id="month-chevron" width="20" height="20" fill="none" stroke="currentColor" style="color: var(--primary);" stroke-width="2">
+                <path d="M6 9l4 4 4-4"/>
+            </svg>
+        </div>
+        
+        <div id="month-picker" class="card hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button onclick="changeYear(-1)" style="background:none;border:none;color:var(--primary);font-size:24px;cursor:pointer;">‹</button>
+                <span id="picker-year" style="font-size: 18px; font-weight: bold;">2025</span>
+                <button onclick="changeYear(1)" style="background:none;border:none;color:var(--primary);font-size:24px;cursor:pointer;">›</button>
+            </div>
+            <div class="month-grid" id="month-grid"></div>
+        </div>
+        
+        <!-- Abonos -->
+        <div class="card">
+            <div class="section-header">
+                <svg width="20" height="20" fill="var(--primary)" viewBox="0 0 20 20"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/></svg>
+                <span style="font-size: 18px; font-weight: 600;">Abonos</span>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">Salario Base</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="salario_base" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">P.P. Pagas Extras</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="pp_pagas" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">Salario Mínimo Garantizado</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="salario_minimo" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">Productividad</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="productividad" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">Horas Festivas</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="horas_festivas" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">Horas Extras</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="horas_extras" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">Plus Nocturnidad</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="plus_nocturnidad" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">Atraso Mes Anterior</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="atraso_mes" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div style="height: 1px; background: var(--bg-input); margin: 16px 0;"></div>
+            
+            <div class="input-row">
+                <input type="text" class="input-field" id="extra1_nombre" value="Concepto Extra 1" style="background: var(--bg-input); border-radius: 8px; padding: 8px 12px; text-align: left; flex: 1; margin-right: 12px;">
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="extra1_valor" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <input type="text" class="input-field" id="extra2_nombre" value="Concepto Extra 2" style="background: var(--bg-input); border-radius: 8px; padding: 8px 12px; text-align: left; flex: 1; margin-right: 12px;">
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="extra2_valor" placeholder="0.00" oninput="calculate()">
+                    <span class="euro-symbol">€</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total Devengado -->
+        <div class="card" style="border: 1px solid var(--bg-input);">
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 4px;">Total Devengado (Bruto)</p>
+            <p id="total-bruto" style="font-size: 28px; font-weight: bold;">0.00 €</p>
+        </div>
+        
+        <!-- Deducciones -->
+        <div class="card">
+            <div class="section-header">
+                <svg width="20" height="20" fill="var(--danger)" viewBox="0 0 20 20"><path d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"/></svg>
+                <span style="font-size: 18px; font-weight: 600;">Deducciones</span>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label">IRPF (%)</span>
+                <div class="input-wrapper">
+                    <input type="number" class="input-field" id="irpf_percent" value="15" oninput="calculate()">
+                    <span class="euro-symbol">%</span>
+                </div>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label" style="color: var(--text-secondary); font-size: 13px;">IRPF (<span id="irpf-label">15</span>%)</span>
+                <span id="irpf-amount" style="color: var(--danger);">-0.00 €</span>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label" style="color: var(--text-secondary); font-size: 13px;">S.S. Contingencias Comunes (4.7%)</span>
+                <span id="ss-common" style="color: var(--danger);">-0.00 €</span>
+            </div>
+            
+            <div class="input-row">
+                <span class="input-label" style="color: var(--text-secondary); font-size: 13px;">S.S. Desempleo/Otros (1.55%)</span>
+                <span id="ss-unemployment" style="color: var(--danger);">-0.00 €</span>
+            </div>
+            
+            <div style="margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--bg-input);">
+                <div class="input-row" style="margin-bottom: 0;">
+                    <span style="font-weight: 600;">Total Deducciones</span>
+                    <span id="total-deducciones" style="color: var(--danger); font-size: 16px; font-weight: bold;">-0.00 €</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Líquido a Percibir -->
+        <div class="net-card">
+            <p style="color: var(--primary); font-size: 14px; margin-bottom: 4px;">Líquido a Percibir (Neto)</p>
+            <p id="total-neto" class="net-value">0.00 €</p>
+        </div>
+        
+        <!-- Submit Button -->
+        <button class="btn-primary" onclick="savePayroll()">
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            Validar y Archivar
+        </button>
+    </div>
+    
+    <!-- Tab: Transferencias -->
+    <div id="tab-transfers" class="tab-content safe-top">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h1 style="font-size: 32px; font-weight: bold; margin-bottom: 4px;">Transferencias</h1>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Distribuidor de Fondos</p>
+            </div>
+            <button class="settings-toggle" onclick="toggleSettings()">
+                <svg id="settings-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Net Salary Display -->
+        <div class="net-card">
+            <p style="color: var(--primary); font-size: 14px;">Salario Neto Disponible</p>
+            <p id="transfer-net" class="net-value">0.00 €</p>
+            <p id="transfer-period" style="color: var(--primary); font-size: 12px; opacity: 0.7;">Sin datos</p>
+        </div>
+        
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="settings-panel hidden">
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">Ajustes de Distribución</h3>
+            
+            <p style="color: var(--primary); font-size: 14px; font-weight: 500; margin-bottom: 12px;">Cuenta N26 - Básicos</p>
+            <div class="input-row">
+                <span class="input-label">Alquiler</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_rent" value="234" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            <div class="input-row">
+                <span class="input-label">Comida</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_food" value="100" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            <div class="input-row">
+                <span class="input-label">Parking</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_parking" value="120" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            <div class="input-row">
+                <span class="input-label">Préstamos</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_loans" value="110" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            
+            <p style="color: var(--primary); font-size: 14px; font-weight: 500; margin: 16px 0 12px;">Cuenta Principal - Servicios</p>
+            <div class="input-row">
+                <span class="input-label">Electricidad</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_electricity" value="50" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            <div class="input-row">
+                <span class="input-label">Agua</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_water" value="20" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            <div class="input-row">
+                <span class="input-label">Gas</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_gas" value="30" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            <div class="input-row">
+                <span class="input-label">Suscripciones</span>
+                <div class="input-wrapper" style="min-width: 100px;">
+                    <input type="number" class="input-field" id="set_subs" value="50" style="font-size: 14px;">
+                    <span class="euro-symbol" style="font-size: 14px;">€</span>
+                </div>
+            </div>
+            
+            <button class="btn-primary" style="margin-top: 16px;" onclick="saveSettings()">Guardar Cambios</button>
+        </div>
+        
+        <!-- Account Cards -->
+        <div class="card">
+            <div style="display: flex; align-items: center;">
+                <div class="account-badge" style="background: var(--danger);">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="10" rx="2"/></svg>
+                </div>
+                <div style="flex: 1; margin-left: 12px;">
+                    <p style="font-weight: 600;">N26 - Básicos</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Gastos fijos mensuales</p>
+                </div>
+                <span id="acc1-total" style="font-size: 20px; font-weight: bold;">564.00 €</span>
+            </div>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--bg-input);">
+                <div style="display: flex; margin-bottom: 10px;"><span style="flex:1;color:var(--text-secondary);">🏠 Alquiler</span><span id="acc1-rent">234.00 €</span></div>
+                <div style="display: flex; margin-bottom: 10px;"><span style="flex:1;color:var(--text-secondary);">🍔 Comida</span><span id="acc1-food">100.00 €</span></div>
+                <div style="display: flex; margin-bottom: 10px;"><span style="flex:1;color:var(--text-secondary);">🚗 Parking</span><span id="acc1-parking">120.00 €</span></div>
+                <div style="display: flex;"><span style="flex:1;color:var(--text-secondary);">💰 Préstamos</span><span id="acc1-loans">110.00 €</span></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div style="display: flex; align-items: center;">
+                <div class="account-badge" style="background: var(--purple);">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg>
+                </div>
+                <div style="flex: 1; margin-left: 12px;">
+                    <p style="font-weight: 600;">Principal - Servicios</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Suministros y suscripciones</p>
+                </div>
+                <span id="acc2-total" style="font-size: 20px; font-weight: bold;">150.00 €</span>
+            </div>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--bg-input);">
+                <div style="display: flex; margin-bottom: 10px;"><span style="flex:1;color:var(--text-secondary);">⚡ Electricidad</span><span id="acc2-elec">50.00 €</span></div>
+                <div style="display: flex; margin-bottom: 10px;"><span style="flex:1;color:var(--text-secondary);">💧 Agua</span><span id="acc2-water">20.00 €</span></div>
+                <div style="display: flex; margin-bottom: 10px;"><span style="flex:1;color:var(--text-secondary);">🔥 Gas</span><span id="acc2-gas">30.00 €</span></div>
+                <div style="display: flex;"><span style="flex:1;color:var(--text-secondary);">📱 Suscripciones</span><span id="acc2-subs">50.00 €</span></div>
+            </div>
+        </div>
+        
+        <div class="card" style="border: 1px solid var(--primary);">
+            <div style="display: flex; align-items: center;">
+                <div class="account-badge" style="background: var(--primary);">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"/></svg>
+                </div>
+                <div style="flex: 1; margin-left: 12px;">
+                    <p style="font-weight: 600;">Ahorro / Vicios</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Saldo restante</p>
+                </div>
+                <span id="acc3-total" style="font-size: 20px; font-weight: bold; color: var(--primary);">0.00 €</span>
+            </div>
+            <div style="margin-top: 16px;">
+                <div style="height: 8px; background: var(--bg-input); border-radius: 4px; overflow: hidden;">
+                    <div id="savings-bar" style="height: 100%; background: var(--primary); border-radius: 4px; width: 0%;"></div>
+                </div>
+                <p id="savings-percent" style="color: var(--text-secondary); font-size: 12px; text-align: right; margin-top: 8px;">0% del salario neto</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab: Estadísticas -->
+    <div id="tab-stats" class="tab-content safe-top">
+        <h1 style="font-size: 32px; font-weight: bold; margin-bottom: 4px;">Estadísticas</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Historial y Análisis Fiscal</p>
+        
+        <!-- Year Selector -->
+        <div class="year-selector">
+            <button class="year-btn" onclick="changeStatsYear(-1)">‹</button>
+            <span id="stats-year" class="year-text">2025</span>
+            <button class="year-btn" onclick="changeStatsYear(1)">›</button>
+        </div>
+        
+        <!-- IRPF Counter -->
+        <div class="irpf-card">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg width="24" height="24" fill="var(--danger)" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
+                <span style="color: var(--danger); font-size: 14px; font-weight: 500;">Total IRPF <span id="irpf-year-label">2025</span></span>
+            </div>
+            <p id="total-irpf" style="color: var(--danger); font-size: 42px; font-weight: bold; margin-top: 8px;">0.00 €</p>
+            <p style="color: var(--danger); font-size: 12px; opacity: 0.7;">Pagado a Hacienda este año</p>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+            <div class="card" style="flex: 1;">
+                <p style="color: var(--text-secondary); font-size: 12px;">Total Bruto</p>
+                <p id="stats-bruto" style="font-size: 20px; font-weight: bold; margin-top: 4px;">0.00 €</p>
+            </div>
+            <div class="card" style="flex: 1;">
+                <p style="color: var(--text-secondary); font-size: 12px;">Total Neto</p>
+                <p id="stats-neto" style="font-size: 20px; font-weight: bold; margin-top: 4px; color: var(--primary);">0.00 €</p>
+            </div>
+        </div>
+        
+        <!-- Chart -->
+        <div class="card">
+            <p style="font-weight: 600; margin-bottom: 12px;">Bruto vs Neto Mensual</p>
+            <div style="display: flex; gap: 20px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="width: 10px; height: 10px; border-radius: 5px; background: var(--purple);"></div>
+                    <span style="color: var(--text-secondary); font-size: 12px;">Bruto</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="width: 10px; height: 10px; border-radius: 5px; background: var(--primary);"></div>
+                    <span style="color: var(--text-secondary); font-size: 12px;">Neto</span>
+                </div>
+            </div>
+            <canvas id="chart" height="200"></canvas>
+        </div>
+        
+        <!-- History Table -->
+        <div class="card">
+            <p style="font-weight: 600; margin-bottom: 16px;">Historial de Nóminas</p>
+            <div id="history-empty" style="text-align: center; padding: 32px 0;">
+                <svg width="48" height="48" fill="#666" viewBox="0 0 20 20" style="margin: 0 auto 12px;"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/></svg>
+                <p style="color: var(--text-secondary);">Sin registros para <span id="empty-year">2025</span></p>
+            </div>
+            <div id="history-table" class="hidden">
+                <div class="table-header">
+                    <span style="flex: 1; color: var(--text-secondary); font-size: 12px;">Mes</span>
+                    <span style="flex: 1; color: var(--text-secondary); font-size: 12px;">Bruto</span>
+                    <span style="flex: 1; color: var(--text-secondary); font-size: 12px;">Neto</span>
+                    <span style="flex: 1; color: var(--text-secondary); font-size: 12px;">IRPF</span>
+                    <span style="width: 40px;"></span>
+                </div>
+                <div id="history-rows"></div>
+            </div>
+        </div>
+        
+        <!-- Export/Import -->
+        <div class="card">
+            <p style="font-weight: 600;">Sincronización</p>
+            <p style="color: var(--text-secondary); font-size: 12px; margin: 4px 0 16px;">Exporta tus datos para guardar en iCloud</p>
+            <div style="display: flex; gap: 12px;">
+                <button class="sync-btn export-btn" onclick="exportData()">📤 Exportar JSON</button>
+                <button class="sync-btn import-btn" onclick="document.getElementById('import-file').click()">📥 Importar JSON</button>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab Bar -->
+    <nav class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('nomina')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+            Nómina
+        </button>
+        <button class="tab-btn" onclick="switchTab('transfers')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16l-4-4m0 0l4-4m-4 4h18M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            Transferencias
+        </button>
+        <button class="tab-btn" onclick="switchTab('stats')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Estadísticas
+        </button>
+    </nav>
+    
+    <script src="./script.js" defer></script>
+</body>
+</html>
