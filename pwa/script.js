@@ -1,4 +1,4 @@
-// Version: 2025-07-27-v7
+// Version: 2025-07-27-v8
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const SETTINGS_KEY = 'mis-finanzas-pro-settings';
@@ -211,12 +211,13 @@ function calculateTotals() {
     // Update SS total
     document.getElementById('ss-total-cuota').textContent = ssAmount.toFixed(2) + ' €';
     
-    // Update display
+    // Update Total Bruto display
     document.getElementById('total-bruto').textContent = totalBruto.toFixed(2) + ' €';
-    document.getElementById('irpf-amount').textContent = '-' + irpfAmount.toFixed(2) + ' €';
-    document.getElementById('ss-amount').textContent = '-' + ssAmount.toFixed(2) + ' €';
-    document.getElementById('total-deducciones').textContent = '-' + totalDeducciones.toFixed(2) + ' €';
-    document.getElementById('total-neto').textContent = totalNeto.toFixed(2) + ' €';
+    
+    // Update RESUMEN DE TOTALES
+    document.getElementById('resumen-abonar').textContent = totalBruto.toFixed(2) + ' €';
+    document.getElementById('resumen-deducir').textContent = '-' + totalDeducciones.toFixed(2) + ' €';
+    document.getElementById('resumen-liquido').textContent = totalNeto.toFixed(2) + ' €';
     
     return { totalBruto, irpfPercent, irpfAmount, ssAmount, totalDeducciones, totalNeto };
 }
