@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-27 -->
+<!-- Updated: 2025-07-27-v4 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -519,7 +519,7 @@
             <div class="deduction-row">
                 <span style="color: var(--text-secondary);">IRPF</span>
                 <div class="deduction-input">
-                    <input type="number" id="irpf_percent" value="6" oninput="calculateTotals()" min="0" max="100">
+                    <input type="number" inputmode="decimal" id="irpf_percent" value="6" oninput="calculateTotals()" min="0" max="100">
                     <span style="color: var(--text-secondary);">%</span>
                     <span id="irpf-amount" style="color: var(--danger); min-width: 80px; text-align: right;">-0.00 €</span>
                 </div>

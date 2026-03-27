@@ -1,4 +1,4 @@
-// Version: 2025-07-27-v3
+// Version: 2025-07-27-v4
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const SETTINGS_KEY = 'mis-finanzas-pro-settings';
@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTransfers();
     updateStats();
     registerServiceWorker();
+    setupEnterKeyNavigation();
+    setupAutoSelectOnFocus();
 });
 
 function registerServiceWorker() {
@@ -49,18 +51,18 @@ function initPayrollTable() {
     const tbody = document.getElementById('payroll-tbody');
     tbody.innerHTML = '';
     
-    concepts.forEach(concept => {
+    concepts.forEach((concept, rowIndex) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="concept-name">
                 ${concept.editable 
-                    ? `<input type="text" id="${concept.id}_name" value="${concept.name}" style="width: 80px;">`
+                    ? `<input type="text" id="${concept.id}_name" value="${concept.name}" style="width: 80px;" data-row="${rowIndex}" data-col="0">`
                     : concept.name}
             </td>
-            <td><input type="number" id="${concept.id}_unidad" placeholder="0" oninput="calculateRow('${concept.id}')" min="0" step="0.01"></td>
-            <td><input type="number" id="${concept.id}_precio" placeholder="0.00" oninput="calculateRow('${concept.id}')" min="0" step="0.01"></td>
+            <td><input type="number" inputmode="decimal" id="${concept.id}_unidad" placeholder="0" oninput="calculateRow('${concept.id}')" min="0" step="0.01" data-row="${rowIndex}" data-col="1"></td>
+            <td><input type="number" inputmode="decimal" id="${concept.id}_precio" placeholder="0.00" oninput="calculateRow('${concept.id}')" min="0" step="0.01" data-row="${rowIndex}" data-col="2"></td>
             <td class="calculated" id="${concept.id}_abonar">0.00</td>
-            <td class="deducir-cell"><input type="number" id="${concept.id}_deducir" placeholder="0.00" oninput="calculateRow('${concept.id}')" min="0" step="0.01"></td>
+            <td class="deducir-cell"><input type="number" inputmode="decimal" id="${concept.id}_deducir" placeholder="0.00" oninput="calculateRow('${concept.id}')" min="0" step="0.01" data-row="${rowIndex}" data-col="3"></td>
             <td class="total-fila" id="${concept.id}_total">0.00</td>
         `;
         tbody.appendChild(row);
@@ -465,4 +467,89 @@ function importData(event) {
     };
     reader.readAsText(file);
     event.target.value = '';
+}
+
+
+// ==================== FAST DATA ENTRY ====================
+
+// Get all input fields in the payroll table in order
+function getPayrollInputs() {
+    const inputs = [];
+    const tbody = document.getElementById('payroll-tbody');
+    if (!tbody) return inputs;
+    
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+        const rowInputs = row.querySelectorAll('input');
+        rowInputs.forEach(input => inputs.push(input));
+    });
+    
+    // Add IRPF input
+    const irpfInput = document.getElementById('irpf_percent');
+    if (irpfInput) inputs.push(irpfInput);
+    
+    return inputs;
+}
+
+// Setup Enter key navigation
+function setupEnterKeyNavigation() {
+    document.addEventListener('keydown', (e) => {
+        // Only handle Enter key
+        if (e.key !== 'Enter') return;
+        
+        // Get the active element
+        const activeElement = document.activeElement;
+        
+        // Check if it's an input field
+        if (!activeElement || activeElement.tagName !== 'INPUT') return;
+        
+        // Prevent form submission
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Get all payroll inputs
+        const inputs = getPayrollInputs();
+        
+        // Find current input index
+        const currentIndex = inputs.indexOf(activeElement);
+        
+        // If found, move to next input
+        if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
+            const nextInput = inputs[currentIndex + 1];
+            nextInput.focus();
+            nextInput.select();
+        } else if (currentIndex === inputs.length - 1) {
+            // At the last input, blur to close keyboard
+            activeElement.blur();
+        }
+    });
+    
+    // Prevent form submission on entire document
+    document.addEventListener('submit', (e) => {
+        e.preventDefault();
+        return false;
+    });
+}
+
+// Setup auto-select on focus
+function setupAutoSelectOnFocus() {
+    document.addEventListener('focusin', (e) => {
+        const target = e.target;
+        
+        // Check if it's an input field
+        if (target.tagName === 'INPUT' && (target.type === 'number' || target.type === 'text')) {
+            // Small delay to ensure the focus is complete (especially on iOS)
+            setTimeout(() => {
+                target.select();
+            }, 50);
+        }
+    });
+    
+    // Also handle click to select
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.tagName === 'INPUT' && (target.type === 'number' || target.type === 'text')) {
+            target.select();
+        }
+    });
 }
