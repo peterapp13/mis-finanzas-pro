@@ -1,4 +1,4 @@
-// Version: 2025-07-27-v6
+// Version: 2025-07-27-v7
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const SETTINGS_KEY = 'mis-finanzas-pro-settings';
@@ -21,18 +21,22 @@ const concepts = [
 ];
 
 // S.S. concepts configuration
+// syncWithBruto: true = auto-sync Base with Total Bruto
 const ssConcepts = [
-    { id: 'ss_contingencias', name: 'Contingencias Comunes', defaultPercent: 4.7, editable: false },
-    { id: 'ss_atep', name: 'AT y EP', defaultPercent: 0.000, editable: false },
-    { id: 'ss_desempleo', name: 'Desempleo', defaultPercent: 1.55, editable: false },
-    { id: 'ss_formacion', name: 'Formación Profesional', defaultPercent: 0.1, editable: false },
-    { id: 'ss_fogasa', name: 'Fondo Garantía Social (FOGASA)', defaultPercent: 0.000, editable: false },
-    { id: 'ss_horas_fm', name: 'Horas extras fuerza mayor', defaultPercent: 2.0, editable: false },
-    { id: 'ss_horas_nfm', name: 'Horas extras no fuerza mayor', defaultPercent: 4.7, editable: false },
-    { id: 'ss_mei', name: 'MEI', defaultPercent: 0.12, editable: false },
-    { id: 'ss_extra1', name: 'Concepto Extra S.S. 1', defaultPercent: 0, editable: true },
-    { id: 'ss_extra2', name: 'Concepto Extra S.S. 2', defaultPercent: 0, editable: true }
+    { id: 'ss_contingencias', name: 'Contingencias Comunes', defaultPercent: 4.7, editable: false, syncWithBruto: true },
+    { id: 'ss_atep', name: 'AT y EP', defaultPercent: 0.000, editable: false, syncWithBruto: false },
+    { id: 'ss_desempleo', name: 'Desempleo', defaultPercent: 1.55, editable: false, syncWithBruto: true },
+    { id: 'ss_formacion', name: 'Formación Profesional', defaultPercent: 0.1, editable: false, syncWithBruto: true },
+    { id: 'ss_fogasa', name: 'Fondo Garantía Social (FOGASA)', defaultPercent: 0.000, editable: false, syncWithBruto: false },
+    { id: 'ss_horas_fm', name: 'Horas extras fuerza mayor', defaultPercent: 2.0, editable: false, syncWithBruto: false },
+    { id: 'ss_horas_nfm', name: 'Horas extras no fuerza mayor', defaultPercent: 4.7, editable: false, syncWithBruto: false },
+    { id: 'ss_mei', name: 'MEI', defaultPercent: 0.12, editable: false, syncWithBruto: true },
+    { id: 'ss_extra1', name: 'Concepto Extra S.S. 1', defaultPercent: 0, editable: true, syncWithBruto: false },
+    { id: 'ss_extra2', name: 'Concepto Extra S.S. 2', defaultPercent: 0, editable: true, syncWithBruto: false }
 ];
+
+// Track which SS Base fields have been manually edited (stops auto-sync)
+const ssManuallyEdited = {};
 
 let selectedMonth = new Date().getMonth() + 1;
 let selectedYear = new Date().getFullYear();
@@ -103,6 +107,11 @@ function initSSTable() {
     const tbody = document.getElementById('ss-tbody');
     tbody.innerHTML = '';
     
+    // Reset manual edit tracking
+    ssConcepts.forEach(concept => {
+        ssManuallyEdited[concept.id] = false;
+    });
+    
     ssConcepts.forEach((concept, rowIndex) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -111,12 +120,30 @@ function initSSTable() {
                     ? `<input type="text" id="${concept.id}_name" value="${concept.name}" style="width: 120px;">`
                     : concept.name}
             </td>
-            <td><input type="number" inputmode="decimal" id="${concept.id}_base" placeholder="0.00" oninput="calculateSSRow('${concept.id}')" min="0" step="0.01" data-ss-row="${rowIndex}" data-ss-col="0"></td>
+            <td><input type="number" inputmode="decimal" id="${concept.id}_base" placeholder="0.00" 
+                oninput="onSSBaseInput('${concept.id}')" 
+                onfocus="onSSBaseFocus('${concept.id}')"
+                min="0" step="0.01" data-ss-row="${rowIndex}" data-ss-col="0"></td>
             <td><input type="number" inputmode="decimal" id="${concept.id}_percent" value="${concept.defaultPercent}" oninput="calculateSSRow('${concept.id}')" min="0" max="100" step="0.001" data-ss-row="${rowIndex}" data-ss-col="1"></td>
             <td class="calculated" id="${concept.id}_cuota" style="color: var(--purple);">0.00</td>
         `;
         tbody.appendChild(row);
     });
+}
+
+// Track when user manually edits a synced SS Base field
+function onSSBaseInput(conceptId) {
+    const concept = ssConcepts.find(c => c.id === conceptId);
+    if (concept && concept.syncWithBruto) {
+        // Mark as manually edited to stop auto-sync
+        ssManuallyEdited[conceptId] = true;
+    }
+    calculateSSRow(conceptId);
+}
+
+// When focusing on a synced field, we don't reset the manual flag
+function onSSBaseFocus(conceptId) {
+    // No action needed, just for tracking
 }
 
 function calculateSSRow(conceptId) {
@@ -129,12 +156,18 @@ function calculateSSRow(conceptId) {
     calculateTotals();
 }
 
-function updateSSBases(totalBruto) {
-    // Update all SS bases to Total Bruto (default behavior)
+// Update synced SS bases when Total Bruto changes
+function updateSyncedSSBases(totalBruto) {
     ssConcepts.forEach(concept => {
-        const baseInput = document.getElementById(`${concept.id}_base`);
-        if (baseInput && !baseInput.value) {
-            baseInput.value = totalBruto.toFixed(2);
+        if (concept.syncWithBruto && !ssManuallyEdited[concept.id]) {
+            const baseInput = document.getElementById(`${concept.id}_base`);
+            if (baseInput) {
+                baseInput.value = totalBruto.toFixed(2);
+                // Recalculate cuota for this row
+                const percent = parseFloat(document.getElementById(`${concept.id}_percent`).value) || 0;
+                const cuota = totalBruto * (percent / 100);
+                document.getElementById(`${concept.id}_cuota`).textContent = cuota.toFixed(2);
+            }
         }
     });
 }
@@ -147,6 +180,9 @@ function calculateTotals() {
         const abonar = parseFloat(document.getElementById(`${concept.id}_abonar`).textContent) || 0;
         totalBruto += abonar; // Total Bruto is sum of all "A Abonar"
     });
+    
+    // Update synced SS bases with new Total Bruto
+    updateSyncedSSBases(totalBruto);
     
     // Get IRPF percentage (max 100%, up to 3 decimals)
     let irpfPercent = parseFloat(document.getElementById('irpf_percent').value) || 0;
@@ -307,8 +343,9 @@ function resetForm() {
         }
     });
     
-    // Reset SS table
+    // Reset SS table and manual edit tracking
     ssConcepts.forEach(concept => {
+        ssManuallyEdited[concept.id] = false; // Reset manual edit flag
         document.getElementById(`${concept.id}_base`).value = '';
         document.getElementById(`${concept.id}_percent`).value = concept.defaultPercent;
         document.getElementById(`${concept.id}_cuota`).textContent = '0.00';
