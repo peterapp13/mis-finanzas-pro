@@ -1,4 +1,4 @@
-// Version: 2025-07-27-v4
+// Version: 2025-07-27-v5
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const SETTINGS_KEY = 'mis-finanzas-pro-settings';
@@ -84,30 +84,46 @@ function calculateRow(conceptId) {
 }
 
 function calculateTotals() {
-    // Calculate Total Bruto (sum of all row totals)
+    // Calculate Total Bruto (sum of all row totals - which is Abonar - Deducir per row)
     let totalBruto = 0;
+    let totalRowDeductions = 0;
+    
     concepts.forEach(concept => {
-        const total = parseFloat(document.getElementById(`${concept.id}_total`).textContent) || 0;
-        totalBruto += total;
+        const abonar = parseFloat(document.getElementById(`${concept.id}_abonar`).textContent) || 0;
+        const deducir = parseFloat(document.getElementById(`${concept.id}_deducir`).value) || 0;
+        totalBruto += abonar; // Total Bruto is sum of all "A Abonar"
+        totalRowDeductions += deducir; // Sum of all row deductions
     });
     
-    // Get IRPF percentage
-    const irpfPercent = parseFloat(document.getElementById('irpf_percent').value) || 0;
+    // Get IRPF percentage (max 100%, up to 3 decimals)
+    let irpfPercent = parseFloat(document.getElementById('irpf_percent').value) || 0;
+    irpfPercent = Math.min(100, Math.max(0, irpfPercent)); // Clamp to 0-100
     
-    // Calculate deductions
+    // Calculate IRPF based on Total Bruto
     const irpfAmount = totalBruto * (irpfPercent / 100);
+    
+    // Calculate SS based on Total Bruto
     const ssAmount = totalBruto * 0.0635; // 6.35%
-    const totalDeducciones = irpfAmount + ssAmount;
+    
+    // Total Deducciones = IRPF + Row Deductions + SS
+    const totalDeducciones = irpfAmount + totalRowDeductions + ssAmount;
+    
+    // Net = Total Bruto - Total Deducciones
     const totalNeto = totalBruto - totalDeducciones;
+    
+    // Update IRPF Section boxes
+    document.getElementById('irpf_remuneracion').value = totalBruto.toFixed(2) + ' €';
+    document.getElementById('irpf_retencion').textContent = irpfAmount.toFixed(2) + ' €';
     
     // Update display
     document.getElementById('total-bruto').textContent = totalBruto.toFixed(2) + ' €';
     document.getElementById('irpf-amount').textContent = '-' + irpfAmount.toFixed(2) + ' €';
+    document.getElementById('row-deductions-total').textContent = '-' + totalRowDeductions.toFixed(2) + ' €';
     document.getElementById('ss-amount').textContent = '-' + ssAmount.toFixed(2) + ' €';
     document.getElementById('total-deducciones').textContent = '-' + totalDeducciones.toFixed(2) + ' €';
     document.getElementById('total-neto').textContent = totalNeto.toFixed(2) + ' €';
     
-    return { totalBruto, irpfPercent, irpfAmount, ssAmount, totalDeducciones, totalNeto };
+    return { totalBruto, irpfPercent, irpfAmount, ssAmount, totalRowDeductions, totalDeducciones, totalNeto };
 }
 
 // ==================== TAB NAVIGATION ====================
@@ -191,6 +207,7 @@ function savePayroll() {
         irpfPercent: calc.irpfPercent,
         irpfAmount: calc.irpfAmount,
         ssAmount: calc.ssAmount,
+        totalRowDeductions: calc.totalRowDeductions,
         totalDeducciones: calc.totalDeducciones,
         createdAt: new Date().toISOString()
     };

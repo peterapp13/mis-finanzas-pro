@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-27-v4 -->
+<!-- Updated: 2025-07-27-v5 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -509,6 +509,40 @@
             <p id="total-bruto" style="font-size: 28px; font-weight: bold;">0.00 €</p>
         </div>
         
+        <!-- RETENCIÓN I.R.P.F. Section -->
+        <div class="card" style="border: 1px solid var(--danger); background: rgba(255, 107, 107, 0.05);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                <svg width="20" height="20" fill="var(--danger)" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm6 6H7v2h6v-2z" clip-rule="evenodd"/></svg>
+                <span style="font-size: 16px; font-weight: 600; color: var(--danger);">RETENCIÓN I.R.P.F.</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                <!-- Box 1: Remuneración (Read-only) -->
+                <div style="background: var(--bg-input); border-radius: 10px; padding: 12px;">
+                    <p style="color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; text-transform: uppercase;">Remuneración</p>
+                    <input type="text" id="irpf_remuneracion" value="0.00 €" disabled readonly 
+                        style="background: transparent; border: none; color: var(--text-primary); font-size: 16px; font-weight: 600; width: 100%; opacity: 0.8; cursor: not-allowed;">
+                </div>
+                
+                <!-- Box 2: Percentage (Editable) -->
+                <div style="background: var(--bg-input); border-radius: 10px; padding: 12px;">
+                    <p style="color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; text-transform: uppercase;">Porcentaje</p>
+                    <div style="display: flex; align-items: center;">
+                        <input type="number" inputmode="decimal" id="irpf_percent" value="6" 
+                            oninput="calculateTotals()" min="0" max="100" step="0.001"
+                            style="background: transparent; border: none; color: var(--primary); font-size: 16px; font-weight: 600; width: 100%; text-align: left;">
+                        <span style="color: var(--primary); font-weight: 600;">%</span>
+                    </div>
+                </div>
+                
+                <!-- Box 3: Retención (Calculated) -->
+                <div style="background: var(--bg-input); border-radius: 10px; padding: 12px;">
+                    <p style="color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; text-transform: uppercase;">Retención</p>
+                    <p id="irpf_retencion" style="color: var(--danger); font-size: 16px; font-weight: 600; margin: 0;">0.00 €</p>
+                </div>
+            </div>
+        </div>
+        
         <!-- Deducciones Globales -->
         <div class="deductions-section">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
@@ -517,12 +551,13 @@
             </div>
             
             <div class="deduction-row">
-                <span style="color: var(--text-secondary);">IRPF</span>
-                <div class="deduction-input">
-                    <input type="number" inputmode="decimal" id="irpf_percent" value="6" oninput="calculateTotals()" min="0" max="100">
-                    <span style="color: var(--text-secondary);">%</span>
-                    <span id="irpf-amount" style="color: var(--danger); min-width: 80px; text-align: right;">-0.00 €</span>
-                </div>
+                <span style="color: var(--text-secondary);">Retención I.R.P.F.</span>
+                <span id="irpf-amount" style="color: var(--danger);">-0.00 €</span>
+            </div>
+            
+            <div class="deduction-row">
+                <span style="color: var(--text-secondary);">Deducciones en Nómina</span>
+                <span id="row-deductions-total" style="color: var(--danger);">-0.00 €</span>
             </div>
             
             <div class="deduction-row">
