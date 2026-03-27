@@ -1,3 +1,4 @@
+// Version: 2025-07-27-v3
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const SETTINGS_KEY = 'mis-finanzas-pro-settings';
