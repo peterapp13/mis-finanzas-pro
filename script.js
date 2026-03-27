@@ -1,4 +1,4 @@
-// Version: 2025-07-27-v8
+// Version: 2025-07-28-v10
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const SETTINGS_KEY = 'mis-finanzas-pro-settings';
@@ -232,6 +232,7 @@ function switchTab(tab) {
     
     if (tab === 'transfers') updateTransfers();
     if (tab === 'stats') updateStats();
+    if (tab === 'historial') updateHistorial();
 }
 
 // ==================== MONTH PICKER ====================
@@ -563,6 +564,123 @@ function deleteRecord(id) {
         updateStats();
         updateTransfers();
     }
+}
+
+// ==================== HISTORIAL ====================
+function updateHistorial() {
+    const selectedYear = parseInt(document.getElementById('historial-year').value);
+    const data = getData();
+    const yearData = data.filter(r => r.year === selectedYear);
+    
+    const tbody = document.getElementById('historial-tbody');
+    tbody.innerHTML = '';
+    
+    // Totals accumulators
+    let totals = {
+        salario: 0, pagas: 0, smg: 0, prod: 0, hfest: 0, chfest: 0,
+        hextra: 0, chextra: 0, noct: 0, atraso: 0, ss: 0, irp: 0, bruto: 0, neto: 0
+    };
+    
+    // Generate 12 rows (one per month)
+    for (let month = 1; month <= 12; month++) {
+        const record = yearData.find(r => r.month === month);
+        const row = document.createElement('tr');
+        
+        if (record) {
+            // Extract data from the saved record
+            const c = record.concepts || {};
+            
+            const salario = c.salario_base ? c.salario_base.abonar : 0;
+            const pagas = c.pp_pagas ? c.pp_pagas.abonar : 0;
+            const smg = c.salario_minimo ? c.salario_minimo.abonar : 0;
+            const prod = c.productividad ? c.productividad.abonar : 0;
+            const hfestUds = c.horas_festivas ? c.horas_festivas.unidad : 0;
+            const hfestCost = c.horas_festivas ? c.horas_festivas.abonar : 0;
+            const hextraUds = c.horas_extras ? c.horas_extras.unidad : 0;
+            const hextraCost = c.horas_extras ? c.horas_extras.abonar : 0;
+            const noct = c.plus_nocturnidad ? c.plus_nocturnidad.abonar : 0;
+            const atraso = c.atraso_mes ? c.atraso_mes.abonar : 0;
+            const ss = record.ssAmount || 0;
+            const irpPercent = record.irpfPercent || 0;
+            const irpCost = record.irpfAmount || 0;
+            const bruto = record.totalBruto || 0;
+            const neto = record.totalNeto || 0;
+            
+            // Accumulate totals
+            totals.salario += salario;
+            totals.pagas += pagas;
+            totals.smg += smg;
+            totals.prod += prod;
+            totals.hfest += hfestUds;
+            totals.chfest += hfestCost;
+            totals.hextra += hextraUds;
+            totals.chextra += hextraCost;
+            totals.noct += noct;
+            totals.atraso += atraso;
+            totals.ss += ss;
+            totals.irp += irpCost;
+            totals.bruto += bruto;
+            totals.neto += neto;
+            
+            row.innerHTML = `
+                <td style="padding: 10px 8px; font-weight: 500; color: var(--primary); position: sticky; left: 0; background: var(--bg-card); white-space: nowrap;">${monthsShort[month - 1]} ${selectedYear}</td>
+                <td style="padding: 10px 6px; text-align: right;">${salario.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${pagas.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${smg.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${prod.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${hfestUds.toFixed(0)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${hfestCost.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${hextraUds.toFixed(0)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${hextraCost.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${noct.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${atraso.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--purple);">${ss.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${irpPercent.toFixed(2)}%</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${irpCost.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right; font-weight: 600;">${bruto.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right; font-weight: 600; color: var(--primary);">${neto.toFixed(2)}</td>
+            `;
+        } else {
+            // Empty row for months without data
+            row.innerHTML = `
+                <td style="padding: 10px 8px; font-weight: 500; color: var(--text-secondary); position: sticky; left: 0; background: var(--bg-card); white-space: nowrap;">${monthsShort[month - 1]} ${selectedYear}</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+            `;
+        }
+        
+        row.style.borderBottom = '1px solid var(--bg-input)';
+        tbody.appendChild(row);
+    }
+    
+    // Update footer totals
+    document.getElementById('hist-total-salario').textContent = totals.salario > 0 ? totals.salario.toFixed(2) : '-';
+    document.getElementById('hist-total-pagas').textContent = totals.pagas > 0 ? totals.pagas.toFixed(2) : '-';
+    document.getElementById('hist-total-smg').textContent = totals.smg > 0 ? totals.smg.toFixed(2) : '-';
+    document.getElementById('hist-total-prod').textContent = totals.prod > 0 ? totals.prod.toFixed(2) : '-';
+    document.getElementById('hist-total-hfest').textContent = totals.hfest > 0 ? totals.hfest.toFixed(0) : '-';
+    document.getElementById('hist-total-chfest').textContent = totals.chfest > 0 ? totals.chfest.toFixed(2) : '-';
+    document.getElementById('hist-total-hextra').textContent = totals.hextra > 0 ? totals.hextra.toFixed(0) : '-';
+    document.getElementById('hist-total-chextra').textContent = totals.chextra > 0 ? totals.chextra.toFixed(2) : '-';
+    document.getElementById('hist-total-noct').textContent = totals.noct > 0 ? totals.noct.toFixed(2) : '-';
+    document.getElementById('hist-total-atraso').textContent = totals.atraso > 0 ? totals.atraso.toFixed(2) : '-';
+    document.getElementById('hist-total-ss').textContent = totals.ss > 0 ? totals.ss.toFixed(2) : '-';
+    document.getElementById('hist-total-irp').textContent = totals.irp > 0 ? totals.irp.toFixed(2) : '-';
+    document.getElementById('hist-total-bruto').textContent = totals.bruto > 0 ? totals.bruto.toFixed(2) : '-';
+    document.getElementById('hist-total-neto').textContent = totals.neto > 0 ? totals.neto.toFixed(2) : '-';
 }
 
 // ==================== EXPORT/IMPORT ====================
