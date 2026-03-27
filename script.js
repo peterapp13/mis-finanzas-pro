@@ -1,7 +1,8 @@
-// Version: 2025-07-28-v10
+// Version: 2025-07-28-v11
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
-const SETTINGS_KEY = 'mis-finanzas-pro-settings';
+const BANKS_KEY = 'mis-finanzas-pro-banks';
+const EXPENSES_KEY = 'mis-finanzas-pro-expenses';
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -49,8 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initSSTable();
     initMonthPicker();
     updateDateDisplay();
-    loadSettings();
-    updateTransfers();
+    updateBanksList();
+    updateExpensesList();
     updateStats();
     registerServiceWorker();
     setupEnterKeyNavigation();
@@ -230,7 +231,8 @@ function switchTab(tab) {
     document.getElementById(`tab-${tab}`).classList.add('active');
     event.currentTarget.classList.add('active');
     
-    if (tab === 'transfers') updateTransfers();
+    if (tab === 'bancos') updateBanksList();
+    if (tab === 'gastos') updateExpensesList();
     if (tab === 'stats') updateStats();
     if (tab === 'historial') updateHistorial();
 }
@@ -373,90 +375,329 @@ function saveData(data) {
 }
 
 function getSettings() {
-    const settings = localStorage.getItem(SETTINGS_KEY);
-    return settings ? JSON.parse(settings) : {
-        rent: 234, food: 100, parking: 120, loans: 110,
-        electricity: 50, water: 20, gas: 30, subs: 50
-    };
+    // Legacy - kept for backward compatibility
+    return {};
 }
 
 function saveSettingsData(settings) {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    // Legacy - kept for backward compatibility
 }
 
-// ==================== TRANSFERS ====================
-function loadSettings() {
-    const s = getSettings();
-    document.getElementById('set_rent').value = s.rent;
-    document.getElementById('set_food').value = s.food;
-    document.getElementById('set_parking').value = s.parking;
-    document.getElementById('set_loans').value = s.loans;
-    document.getElementById('set_electricity').value = s.electricity;
-    document.getElementById('set_water').value = s.water;
-    document.getElementById('set_gas').value = s.gas;
-    document.getElementById('set_subs').value = s.subs;
+// ==================== BANKS MANAGEMENT ====================
+function getBanks() {
+    const data = localStorage.getItem(BANKS_KEY);
+    return data ? JSON.parse(data) : [];
 }
 
-function toggleSettings() {
-    document.getElementById('settings-panel').classList.toggle('hidden');
+function saveBanks(banks) {
+    localStorage.setItem(BANKS_KEY, JSON.stringify(banks));
 }
 
-function saveSettings() {
-    const settings = {
-        rent: parseFloat(document.getElementById('set_rent').value) || 0,
-        food: parseFloat(document.getElementById('set_food').value) || 0,
-        parking: parseFloat(document.getElementById('set_parking').value) || 0,
-        loans: parseFloat(document.getElementById('set_loans').value) || 0,
-        electricity: parseFloat(document.getElementById('set_electricity').value) || 0,
-        water: parseFloat(document.getElementById('set_water').value) || 0,
-        gas: parseFloat(document.getElementById('set_gas').value) || 0,
-        subs: parseFloat(document.getElementById('set_subs').value) || 0
-    };
-    saveSettingsData(settings);
-    toggleSettings();
-    updateTransfers();
-    alert('Configuración guardada correctamente');
-}
-
-function updateTransfers() {
-    const data = getData();
-    const s = getSettings();
+function addBank() {
+    const nameInput = document.getElementById('new-bank-name');
+    const name = nameInput.value.trim();
     
-    // Get latest payroll
-    const sorted = data.sort((a, b) => {
-        if (a.year !== b.year) return b.year - a.year;
-        return b.month - a.month;
+    if (!name) {
+        alert('Introduce un nombre para el banco');
+        return;
+    }
+    
+    const banks = getBanks();
+    
+    // Check for duplicates
+    if (banks.some(b => b.name.toLowerCase() === name.toLowerCase())) {
+        alert('Ya existe un banco con ese nombre');
+        return;
+    }
+    
+    banks.push({
+        id: Date.now().toString(),
+        name: name
     });
-    const latest = sorted[0];
     
-    const netSalary = latest ? latest.totalNeto : 0;
+    saveBanks(banks);
+    nameInput.value = '';
+    updateBanksList();
+    updateBankDropdowns();
+}
+
+function editBank(id) {
+    const banks = getBanks();
+    const bank = banks.find(b => b.id === id);
     
-    document.getElementById('transfer-net').textContent = netSalary.toFixed(2) + ' €';
-    document.getElementById('transfer-period').textContent = latest ? `${months[latest.month - 1]} ${latest.year}` : 'Sin datos';
+    if (!bank) return;
     
-    // Account 1 - N26
-    const acc1Total = s.rent + s.food + s.parking + s.loans;
-    document.getElementById('acc1-total').textContent = acc1Total.toFixed(2) + ' €';
-    document.getElementById('acc1-rent').textContent = s.rent.toFixed(2) + ' €';
-    document.getElementById('acc1-food').textContent = s.food.toFixed(2) + ' €';
-    document.getElementById('acc1-parking').textContent = s.parking.toFixed(2) + ' €';
-    document.getElementById('acc1-loans').textContent = s.loans.toFixed(2) + ' €';
+    const newName = prompt('Nuevo nombre del banco:', bank.name);
     
-    // Account 2 - Principal
-    const acc2Total = s.electricity + s.water + s.gas + s.subs;
-    document.getElementById('acc2-total').textContent = acc2Total.toFixed(2) + ' €';
-    document.getElementById('acc2-elec').textContent = s.electricity.toFixed(2) + ' €';
-    document.getElementById('acc2-water').textContent = s.water.toFixed(2) + ' €';
-    document.getElementById('acc2-gas').textContent = s.gas.toFixed(2) + ' €';
-    document.getElementById('acc2-subs').textContent = s.subs.toFixed(2) + ' €';
+    if (newName === null) return;
     
-    // Account 3 - Savings
-    const acc3Total = Math.max(0, netSalary - acc1Total - acc2Total);
-    document.getElementById('acc3-total').textContent = acc3Total.toFixed(2) + ' €';
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+        alert('El nombre no puede estar vacío');
+        return;
+    }
     
-    const percent = netSalary > 0 ? (acc3Total / netSalary) * 100 : 0;
-    document.getElementById('savings-bar').style.width = Math.min(100, percent) + '%';
-    document.getElementById('savings-percent').textContent = percent.toFixed(1) + '% del salario neto';
+    // Check for duplicates (excluding current bank)
+    if (banks.some(b => b.id !== id && b.name.toLowerCase() === trimmedName.toLowerCase())) {
+        alert('Ya existe un banco con ese nombre');
+        return;
+    }
+    
+    bank.name = trimmedName;
+    saveBanks(banks);
+    updateBanksList();
+    updateBankDropdowns();
+    updateExpensesList(); // Update expenses to show new bank name
+}
+
+function deleteBank(id) {
+    if (!confirm('¿Eliminar este banco? Los gastos asociados perderán el banco asignado.')) return;
+    
+    let banks = getBanks();
+    banks = banks.filter(b => b.id !== id);
+    saveBanks(banks);
+    
+    // Clear bank from associated expenses
+    let expenses = getExpenses();
+    expenses = expenses.map(e => {
+        if (e.bankId === id) {
+            e.bankId = '';
+        }
+        return e;
+    });
+    saveExpenses(expenses);
+    
+    updateBanksList();
+    updateBankDropdowns();
+    updateExpensesList();
+}
+
+function updateBanksList() {
+    const banks = getBanks();
+    const container = document.getElementById('banks-list');
+    const emptyState = document.getElementById('banks-empty');
+    
+    if (banks.length === 0) {
+        emptyState.style.display = 'block';
+        // Remove any bank rows
+        const existingRows = container.querySelectorAll('.bank-row');
+        existingRows.forEach(row => row.remove());
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    // Clear existing rows
+    const existingRows = container.querySelectorAll('.bank-row');
+    existingRows.forEach(row => row.remove());
+    
+    banks.forEach(bank => {
+        const row = document.createElement('div');
+        row.className = 'bank-row';
+        row.style.cssText = 'display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--bg-input);';
+        row.innerHTML = `
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--purple); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z"/></svg>
+            </div>
+            <span style="flex: 1; font-weight: 500;">${bank.name}</span>
+            <button onclick="editBank('${bank.id}')" style="background: none; border: none; color: var(--primary); padding: 8px; cursor: pointer;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button onclick="deleteBank('${bank.id}')" style="background: none; border: none; color: var(--danger); padding: 8px; cursor: pointer;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function updateBankDropdowns() {
+    const banks = getBanks();
+    const dropdown = document.getElementById('expense-bank');
+    
+    if (!dropdown) return;
+    
+    // Keep the first option
+    dropdown.innerHTML = '<option value="">-- Seleccionar --</option>';
+    
+    banks.forEach(bank => {
+        const option = document.createElement('option');
+        option.value = bank.id;
+        option.textContent = bank.name;
+        dropdown.appendChild(option);
+    });
+}
+
+// ==================== EXPENSES MANAGEMENT ====================
+function getExpenses() {
+    const data = localStorage.getItem(EXPENSES_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+function saveExpenses(expenses) {
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
+}
+
+function toggleExpenseDateInput() {
+    const frequency = document.getElementById('expense-frequency').value;
+    const container = document.getElementById('expense-date-container');
+    
+    if (frequency === 'mensual') {
+        container.innerHTML = `
+            <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Día del Mes</label>
+            <input type="number" id="expense-day" placeholder="1-31" min="1" max="31"
+                style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+        `;
+    } else {
+        container.innerHTML = `
+            <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Fecha (Día/Mes)</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="expense-day" placeholder="Día" min="1" max="31"
+                    style="flex: 1; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 12px; color: var(--text-primary); font-size: 14px; outline: none;">
+                <input type="number" id="expense-month" placeholder="Mes" min="1" max="12"
+                    style="flex: 1; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 12px; color: var(--text-primary); font-size: 14px; outline: none;">
+            </div>
+        `;
+    }
+}
+
+function addExpense() {
+    const name = document.getElementById('expense-name').value.trim();
+    const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+    const frequency = document.getElementById('expense-frequency').value;
+    const day = parseInt(document.getElementById('expense-day').value) || 1;
+    const monthEl = document.getElementById('expense-month');
+    const month = monthEl ? parseInt(monthEl.value) || 1 : null;
+    const bankId = document.getElementById('expense-bank').value;
+    
+    if (!name) {
+        alert('Introduce un nombre para el gasto');
+        return;
+    }
+    
+    if (amount <= 0) {
+        alert('Introduce un monto válido');
+        return;
+    }
+    
+    const expenses = getExpenses();
+    expenses.push({
+        id: Date.now().toString(),
+        name: name,
+        amount: amount,
+        frequency: frequency,
+        day: day,
+        month: frequency === 'anual' ? month : null,
+        bankId: bankId
+    });
+    
+    saveExpenses(expenses);
+    
+    // Clear form
+    document.getElementById('expense-name').value = '';
+    document.getElementById('expense-amount').value = '';
+    document.getElementById('expense-day').value = '';
+    if (monthEl) monthEl.value = '';
+    document.getElementById('expense-bank').value = '';
+    
+    updateExpensesList();
+}
+
+function editExpense(id) {
+    const expenses = getExpenses();
+    const expense = expenses.find(e => e.id === id);
+    
+    if (!expense) return;
+    
+    const newName = prompt('Nombre del gasto:', expense.name);
+    if (newName === null) return;
+    
+    const newAmount = prompt('Monto (€):', expense.amount);
+    if (newAmount === null) return;
+    
+    expense.name = newName.trim() || expense.name;
+    expense.amount = parseFloat(newAmount) || expense.amount;
+    
+    saveExpenses(expenses);
+    updateExpensesList();
+}
+
+function deleteExpense(id) {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    
+    let expenses = getExpenses();
+    expenses = expenses.filter(e => e.id !== id);
+    saveExpenses(expenses);
+    updateExpensesList();
+}
+
+function updateExpensesList() {
+    const expenses = getExpenses();
+    const banks = getBanks();
+    const container = document.getElementById('expenses-list');
+    const emptyState = document.getElementById('expenses-empty');
+    
+    // Update bank dropdowns
+    updateBankDropdowns();
+    
+    if (expenses.length === 0) {
+        emptyState.style.display = 'block';
+        const existingRows = container.querySelectorAll('.expense-row');
+        existingRows.forEach(row => row.remove());
+        document.getElementById('expenses-monthly-total').textContent = '0.00 €';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    // Clear existing rows
+    const existingRows = container.querySelectorAll('.expense-row');
+    existingRows.forEach(row => row.remove());
+    
+    let monthlyTotal = 0;
+    
+    expenses.forEach(expense => {
+        const bank = banks.find(b => b.id === expense.bankId);
+        const bankName = bank ? bank.name : 'Sin banco';
+        
+        // Calculate monthly equivalent
+        const monthlyAmount = expense.frequency === 'anual' ? expense.amount / 12 : expense.amount;
+        monthlyTotal += monthlyAmount;
+        
+        // Format date display
+        let dateDisplay;
+        if (expense.frequency === 'mensual') {
+            dateDisplay = `Día ${expense.day}`;
+        } else {
+            dateDisplay = `${expense.day}/${expense.month || 1}`;
+        }
+        
+        const row = document.createElement('div');
+        row.className = 'expense-row';
+        row.style.cssText = 'padding: 14px 0; border-bottom: 1px solid var(--bg-input);';
+        row.innerHTML = `
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <span style="flex: 1; font-weight: 600;">${expense.name}</span>
+                <span style="font-size: 18px; font-weight: bold; color: var(--primary);">${expense.amount.toFixed(2)} €</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 12px; color: var(--text-secondary); background: var(--bg-input); padding: 4px 8px; border-radius: 6px;">
+                    ${expense.frequency === 'mensual' ? '📅 Mensual' : '📆 Anual'} • ${dateDisplay}
+                </span>
+                <span style="font-size: 12px; color: var(--purple);">🏦 ${bankName}</span>
+                <div style="flex: 1;"></div>
+                <button onclick="editExpense('${expense.id}')" style="background: none; border: none; color: var(--primary); padding: 4px; cursor: pointer;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button onclick="deleteExpense('${expense.id}')" style="background: none; border: none; color: var(--danger); padding: 4px; cursor: pointer;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+    
+    document.getElementById('expenses-monthly-total').textContent = monthlyTotal.toFixed(2) + ' €';
 }
 
 // ==================== STATS ====================
@@ -562,7 +803,6 @@ function deleteRecord(id) {
         data = data.filter(r => r.id !== id);
         saveData(data);
         updateStats();
-        updateTransfers();
     }
 }
 
@@ -687,7 +927,8 @@ function updateHistorial() {
 function exportData() {
     const data = {
         payroll_records: getData(),
-        settings: getSettings(),
+        banks: getBanks(),
+        expenses: getExpenses(),
         exported_at: new Date().toISOString()
     };
     
@@ -711,10 +952,11 @@ function importData(event) {
             
             if (confirm('Esto reemplazará todos los datos actuales. ¿Deseas continuar?')) {
                 if (data.payroll_records) saveData(data.payroll_records);
-                if (data.settings) saveSettingsData(data.settings);
+                if (data.banks) saveBanks(data.banks);
+                if (data.expenses) saveExpenses(data.expenses);
                 
-                loadSettings();
-                updateTransfers();
+                updateBanksList();
+                updateExpensesList();
                 updateStats();
                 alert('Datos importados correctamente');
             }
