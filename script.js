@@ -1,8 +1,9 @@
-// Version: 2025-07-28-v11
+// Version: 2025-07-28-v12
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
 const EXPENSES_KEY = 'mis-finanzas-pro-expenses';
+const LOANS_KEY = 'mis-finanzas-pro-loans';
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDateDisplay();
     updateBanksList();
     updateExpensesList();
+    updateLoansList();
     updateStats();
     registerServiceWorker();
     setupEnterKeyNavigation();
@@ -233,6 +235,7 @@ function switchTab(tab) {
     
     if (tab === 'bancos') updateBanksList();
     if (tab === 'gastos') updateExpensesList();
+    if (tab === 'prestamos') updateLoansList();
     if (tab === 'stats') updateStats();
     if (tab === 'historial') updateHistorial();
 }
@@ -700,6 +703,297 @@ function updateExpensesList() {
     document.getElementById('expenses-monthly-total').textContent = monthlyTotal.toFixed(2) + ' €';
 }
 
+// ==================== LOANS MANAGEMENT ====================
+function getLoans() {
+    const data = localStorage.getItem(LOANS_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+function saveLoans(loans) {
+    localStorage.setItem(LOANS_KEY, JSON.stringify(loans));
+}
+
+function showLoanForm(loanId = null) {
+    const form = document.getElementById('loan-form');
+    form.classList.remove('hidden');
+    
+    // Populate bank dropdown
+    const banks = getBanks();
+    const bankSelect = document.getElementById('loan-bank');
+    bankSelect.innerHTML = '<option value="">-- Seleccionar --</option>';
+    banks.forEach(bank => {
+        const option = document.createElement('option');
+        option.value = bank.id;
+        option.textContent = bank.name;
+        bankSelect.appendChild(option);
+    });
+    
+    if (loanId) {
+        // Edit mode
+        const loans = getLoans();
+        const loan = loans.find(l => l.id === loanId);
+        if (loan) {
+            document.getElementById('loan-description').value = loan.description;
+            document.getElementById('loan-lender').value = loan.lender;
+            document.getElementById('loan-bank').value = loan.bankId || '';
+            document.getElementById('loan-principal').value = loan.principal;
+            document.getElementById('loan-start-date').value = loan.startDate;
+            document.getElementById('loan-installments').value = loan.installments;
+            document.getElementById('loan-payment').value = loan.payment;
+            document.getElementById('loan-edit-id').value = loanId;
+            calculateLoanTotal();
+        }
+    } else {
+        // New loan mode - clear form
+        document.getElementById('loan-description').value = '';
+        document.getElementById('loan-lender').value = '';
+        document.getElementById('loan-bank').value = '';
+        document.getElementById('loan-principal').value = '';
+        document.getElementById('loan-start-date').value = '';
+        document.getElementById('loan-installments').value = '';
+        document.getElementById('loan-payment').value = '';
+        document.getElementById('loan-edit-id').value = '';
+        document.getElementById('loan-total-display').textContent = '0.00 €';
+    }
+}
+
+function hideLoanForm() {
+    document.getElementById('loan-form').classList.add('hidden');
+}
+
+function calculateLoanTotal() {
+    const installments = parseInt(document.getElementById('loan-installments').value) || 0;
+    const payment = parseFloat(document.getElementById('loan-payment').value) || 0;
+    const total = installments * payment;
+    document.getElementById('loan-total-display').textContent = total.toFixed(2) + ' €';
+}
+
+function saveLoan() {
+    const description = document.getElementById('loan-description').value.trim();
+    const lender = document.getElementById('loan-lender').value.trim();
+    const bankId = document.getElementById('loan-bank').value;
+    const principal = parseFloat(document.getElementById('loan-principal').value) || 0;
+    const startDate = document.getElementById('loan-start-date').value;
+    const installments = parseInt(document.getElementById('loan-installments').value) || 0;
+    const payment = parseFloat(document.getElementById('loan-payment').value) || 0;
+    const editId = document.getElementById('loan-edit-id').value;
+    
+    if (!description) {
+        alert('Introduce una descripción');
+        return;
+    }
+    
+    if (installments <= 0 || payment <= 0) {
+        alert('Introduce valores válidos para cuotas y pago');
+        return;
+    }
+    
+    const loans = getLoans();
+    
+    const loanData = {
+        description,
+        lender,
+        bankId,
+        principal,
+        startDate,
+        installments,
+        payment,
+        totalCost: installments * payment,
+        paidOff: false
+    };
+    
+    if (editId) {
+        // Update existing
+        const index = loans.findIndex(l => l.id === editId);
+        if (index !== -1) {
+            loanData.id = editId;
+            loanData.paidOff = loans[index].paidOff;
+            loans[index] = loanData;
+        }
+    } else {
+        // Create new
+        loanData.id = Date.now().toString();
+        loans.push(loanData);
+    }
+    
+    saveLoans(loans);
+    hideLoanForm();
+    updateLoansList();
+}
+
+function deleteLoan(id) {
+    if (!confirm('¿Eliminar este préstamo?')) return;
+    
+    let loans = getLoans();
+    loans = loans.filter(l => l.id !== id);
+    saveLoans(loans);
+    updateLoansList();
+}
+
+function toggleLoanPaidOff(id) {
+    const loans = getLoans();
+    const loan = loans.find(l => l.id === id);
+    
+    if (loan) {
+        loan.paidOff = !loan.paidOff;
+        saveLoans(loans);
+        updateLoansList();
+    }
+}
+
+function calculateLoanStatus(loan) {
+    if (loan.paidOff) {
+        return {
+            remainingInstallments: 0,
+            pendingAmount: 0,
+            paidInstallments: loan.installments,
+            percentPaid: 100
+        };
+    }
+    
+    if (!loan.startDate) {
+        return {
+            remainingInstallments: loan.installments,
+            pendingAmount: loan.totalCost,
+            paidInstallments: 0,
+            percentPaid: 0
+        };
+    }
+    
+    const startDate = new Date(loan.startDate);
+    const now = new Date();
+    
+    // Calculate months passed
+    let monthsPassed = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
+    
+    // If we're past the day of the month of first payment, count this month as paid
+    if (now.getDate() >= startDate.getDate()) {
+        monthsPassed += 1;
+    }
+    
+    // Clamp to valid range
+    const paidInstallments = Math.min(Math.max(0, monthsPassed), loan.installments);
+    const remainingInstallments = loan.installments - paidInstallments;
+    const pendingAmount = remainingInstallments * loan.payment;
+    const percentPaid = (paidInstallments / loan.installments) * 100;
+    
+    return {
+        remainingInstallments,
+        pendingAmount,
+        paidInstallments,
+        percentPaid
+    };
+}
+
+function updateLoansList() {
+    const loans = getLoans();
+    const banks = getBanks();
+    const container = document.getElementById('loans-list');
+    const emptyState = document.getElementById('loans-empty');
+    
+    if (loans.length === 0) {
+        emptyState.style.display = 'block';
+        const existingCards = container.querySelectorAll('.loan-card');
+        existingCards.forEach(card => card.remove());
+        document.getElementById('loans-total-debt').textContent = '0.00 €';
+        document.getElementById('loans-monthly-payment').textContent = '0.00 €';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    // Clear existing cards
+    const existingCards = container.querySelectorAll('.loan-card');
+    existingCards.forEach(card => card.remove());
+    
+    let totalDebt = 0;
+    let totalMonthly = 0;
+    
+    loans.forEach(loan => {
+        const bank = banks.find(b => b.id === loan.bankId);
+        const bankName = bank ? bank.name : 'Sin banco';
+        const status = calculateLoanStatus(loan);
+        
+        totalDebt += status.pendingAmount;
+        if (!loan.paidOff && status.remainingInstallments > 0) {
+            totalMonthly += loan.payment;
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'loan-card card';
+        card.style.cssText = loan.paidOff 
+            ? 'border: 1px solid var(--primary); opacity: 0.7; margin-bottom: 16px;'
+            : 'border: 1px solid var(--bg-input); margin-bottom: 16px;';
+        
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div>
+                    <p style="font-size: 18px; font-weight: 600;">${loan.description}</p>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-top: 2px;">${loan.lender || 'Sin prestamista'} • 🏦 ${bankName}</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="showLoanForm('${loan.id}')" style="background: none; border: none; color: var(--primary); padding: 4px; cursor: pointer;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onclick="deleteLoan('${loan.id}')" style="background: none; border: none; color: var(--danger); padding: 4px; cursor: pointer;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <div style="background: var(--bg-input); border-radius: 8px; padding: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Costo Inicial</p>
+                    <p style="font-weight: 600; margin-top: 2px;">${loan.principal.toFixed(2)} €</p>
+                </div>
+                <div style="background: var(--bg-input); border-radius: 8px; padding: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Cuota Mensual</p>
+                    <p style="font-weight: 600; margin-top: 2px;">${loan.payment.toFixed(2)} €</p>
+                </div>
+                <div style="background: var(--bg-input); border-radius: 8px; padding: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Total a Devolver</p>
+                    <p style="font-weight: 600; margin-top: 2px;">${loan.totalCost.toFixed(2)} €</p>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <div style="background: rgba(108, 92, 231, 0.1); border-radius: 8px; padding: 12px; border: 1px solid var(--purple);">
+                    <p style="color: var(--purple); font-size: 10px; text-transform: uppercase;">Cuotas Restantes</p>
+                    <p style="font-size: 24px; font-weight: bold; color: var(--purple); margin-top: 4px;">${status.remainingInstallments} <span style="font-size: 12px; font-weight: normal;">de ${loan.installments}</span></p>
+                </div>
+                <div style="background: rgba(255, 107, 107, 0.1); border-radius: 8px; padding: 12px; border: 1px solid var(--danger);">
+                    <p style="color: var(--danger); font-size: 10px; text-transform: uppercase;">Dinero Pendiente</p>
+                    <p style="font-size: 24px; font-weight: bold; color: var(--danger); margin-top: 4px;">${status.pendingAmount.toFixed(2)} €</p>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="color: var(--text-secondary); font-size: 11px;">Progreso de pago</span>
+                    <span style="color: var(--primary); font-size: 11px; font-weight: 600;">${status.percentPaid.toFixed(0)}%</span>
+                </div>
+                <div style="height: 8px; background: var(--bg-input); border-radius: 4px; overflow: hidden;">
+                    <div style="height: 100%; background: ${loan.paidOff ? 'var(--primary)' : 'linear-gradient(90deg, var(--purple), var(--primary))'}; border-radius: 4px; width: ${status.percentPaid}%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            
+            <!-- Toggle Paid Off -->
+            <button onclick="toggleLoanPaidOff('${loan.id}')" style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; ${loan.paidOff 
+                ? 'background: var(--primary); color: var(--bg-dark); border: none;' 
+                : 'background: transparent; color: var(--primary); border: 1px solid var(--primary);'}">
+                ${loan.paidOff ? '✓ Pagado Totalmente' : 'Marcar como Pagado'}
+            </button>
+        `;
+        
+        container.appendChild(card);
+    });
+    
+    // Update summary
+    document.getElementById('loans-total-debt').textContent = totalDebt.toFixed(2) + ' €';
+    document.getElementById('loans-monthly-payment').textContent = totalMonthly.toFixed(2) + ' €';
+}
+
 // ==================== STATS ====================
 function changeStatsYear(delta) {
     statsYear += delta;
@@ -929,6 +1223,7 @@ function exportData() {
         payroll_records: getData(),
         banks: getBanks(),
         expenses: getExpenses(),
+        loans: getLoans(),
         exported_at: new Date().toISOString()
     };
     
@@ -954,9 +1249,11 @@ function importData(event) {
                 if (data.payroll_records) saveData(data.payroll_records);
                 if (data.banks) saveBanks(data.banks);
                 if (data.expenses) saveExpenses(data.expenses);
+                if (data.loans) saveLoans(data.loans);
                 
                 updateBanksList();
                 updateExpensesList();
+                updateLoansList();
                 updateStats();
                 alert('Datos importados correctamente');
             }

@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v11 -->
+<!-- Updated: 2025-07-28-v12 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -712,6 +712,109 @@
         </div>
     </div>
     
+    <!-- Tab: Préstamos -->
+    <div id="tab-prestamos" class="tab-content safe-top">
+        <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Préstamos</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Gestión de Financiaciones</p>
+        
+        <!-- Summary Cards -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+            <div class="card" style="border: 1px solid var(--danger);">
+                <p style="color: var(--text-secondary); font-size: 11px; text-transform: uppercase;">Deuda Total</p>
+                <p id="loans-total-debt" style="font-size: 22px; font-weight: bold; color: var(--danger); margin-top: 4px;">0.00 €</p>
+            </div>
+            <div class="card" style="border: 1px solid var(--primary);">
+                <p style="color: var(--text-secondary); font-size: 11px; text-transform: uppercase;">Cuota Mensual</p>
+                <p id="loans-monthly-payment" style="font-size: 22px; font-weight: bold; color: var(--primary); margin-top: 4px;">0.00 €</p>
+            </div>
+        </div>
+        
+        <!-- Add Loan Button -->
+        <button onclick="showLoanForm()" class="btn-primary" style="margin-bottom: 20px;">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            Añadir Préstamo
+        </button>
+        
+        <!-- Loan Form (Hidden by default) -->
+        <div id="loan-form" class="card hidden" style="border: 1px solid var(--purple);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <p style="font-weight: 600; color: var(--purple);">Nuevo Préstamo</p>
+                <button onclick="hideLoanForm()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px;">✕</button>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Descripción</label>
+                <input type="text" id="loan-description" placeholder="Ej: iPhone 15, Nintendo Switch..."
+                    style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Prestamista</label>
+                    <input type="text" id="loan-lender" placeholder="Ej: BBVA, Apple..."
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Banco Asociado</label>
+                    <select id="loan-bank"
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
+                        <option value="">-- Seleccionar --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Costo Inicial (€)</label>
+                    <input type="number" inputmode="decimal" id="loan-principal" placeholder="0.00" min="0" step="0.01"
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Fecha Primera Cuota</label>
+                    <input type="date" id="loan-start-date"
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Cantidad de Cuotas</label>
+                    <input type="number" id="loan-installments" placeholder="12" min="1" step="1" oninput="calculateLoanTotal()"
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Costo de Cuota (€)</label>
+                    <input type="number" inputmode="decimal" id="loan-payment" placeholder="0.00" min="0" step="0.01" oninput="calculateLoanTotal()"
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+                </div>
+            </div>
+            
+            <!-- Calculated Total -->
+            <div style="background: var(--bg-input); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary); font-size: 12px;">Costo Total a Devolver</span>
+                    <span id="loan-total-display" style="color: var(--danger); font-size: 18px; font-weight: bold;">0.00 €</span>
+                </div>
+            </div>
+            
+            <input type="hidden" id="loan-edit-id" value="">
+            
+            <button onclick="saveLoan()" class="btn-primary">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                Guardar Préstamo
+            </button>
+        </div>
+        
+        <!-- Loans List -->
+        <div id="loans-list">
+            <div id="loans-empty" class="card" style="text-align: center; padding: 40px 20px;">
+                <svg width="56" height="56" fill="#666" viewBox="0 0 20 20" style="margin: 0 auto 16px;"><path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/></svg>
+                <p style="color: var(--text-secondary); font-size: 16px;">No hay préstamos registrados</p>
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 4px;">Añade tu primer préstamo para comenzar</p>
+            </div>
+        </div>
+    </div>
+    
     <!-- Tab: Estadísticas -->
     <div id="tab-stats" class="tab-content safe-top">
         <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Estadísticas</h1>
@@ -880,6 +983,10 @@
         <button class="tab-btn" onclick="switchTab('gastos')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             Gastos
+        </button>
+        <button class="tab-btn" onclick="switchTab('prestamos')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            Préstamos
         </button>
         <button class="tab-btn" onclick="switchTab('stats')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
