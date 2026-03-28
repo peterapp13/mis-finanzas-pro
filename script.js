@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v35
+// Version: 2025-07-28-v36
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2255,7 +2255,7 @@ const ALL_STORAGE_KEYS = [
 // Export ALL localStorage data as JSON
 function exportAllData() {
     const backup = {
-        version: 'v20',
+        version: 'v36',
         exportDate: new Date().toISOString(),
         data: {}
     };
@@ -2292,6 +2292,84 @@ function exportAllData() {
     URL.revokeObjectURL(url);
     
     alert('✅ Copia de seguridad exportada\n\nArchivo: ' + fileName + '\n\nGuárdalo en iCloud Drive o Files para mantenerlo seguro.');
+}
+
+// Export payroll history to CSV for Excel (European format with semicolons)
+function exportPayrollHistoryToCSV() {
+    const data = getData();
+    
+    if (data.length === 0) {
+        alert('⚠️ No hay datos de nóminas para exportar');
+        return;
+    }
+    
+    // CSV Header (semicolon separated for European Excel)
+    const headers = ['Mes', 'Año', 'Bruto', 'Seguridad Social', 'IRPF', 'Neto', 'MEI', 'Base Imponible'];
+    
+    // Convert number to European format (dot to comma)
+    const toEuropeanNumber = (num) => {
+        if (num === null || num === undefined || isNaN(num)) return '0,00';
+        return Number(num).toFixed(2).replace('.', ',');
+    };
+    
+    // Build CSV rows
+    const rows = data.map(record => {
+        // Calculate MEI from SS data if available
+        let meiAmount = 0;
+        let totalSS = 0;
+        
+        if (record.ssConcepts) {
+            Object.values(record.ssConcepts).forEach(ss => {
+                totalSS += (ss.cuota || 0);
+            });
+            if (record.ssConcepts.ss_mei) {
+                meiAmount = record.ssConcepts.ss_mei.cuota || 0;
+            }
+        }
+        
+        // Base Imponible (taxable base) = Total Bruto
+        const baseImponible = record.totalBruto || 0;
+        
+        return [
+            months[parseInt(record.month) - 1] || record.month,
+            record.year,
+            toEuropeanNumber(record.totalBruto),
+            toEuropeanNumber(totalSS),
+            toEuropeanNumber(record.irpfAmount),
+            toEuropeanNumber(record.totalNeto),
+            toEuropeanNumber(meiAmount),
+            toEuropeanNumber(baseImponible)
+        ].join(';');
+    });
+    
+    // Sort rows by year and month (most recent first)
+    data.sort((a, b) => {
+        if (parseInt(a.year) !== parseInt(b.year)) return parseInt(b.year) - parseInt(a.year);
+        return parseInt(b.month) - parseInt(a.month);
+    });
+    
+    // Combine header and rows
+    const csvContent = [headers.join(';'), ...rows].join('\n');
+    
+    // Add BOM for proper UTF-8 encoding in Excel
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create file name with date
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}`;
+    const fileName = `PF_Finance_Export_${dateStr}.csv`;
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('✅ Exportación CSV completada\n\nArchivo: ' + fileName + '\n\n📊 Abre con Excel para ver tus datos de nóminas.');
 }
 
 // Import data from JSON backup file

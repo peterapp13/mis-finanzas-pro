@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v35 -->
+<!-- Updated: 2025-07-28-v36 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#0A0A14">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Mis Finanzas Pro">
-    <title>Mis Finanzas Pro</title>
+    <meta name="apple-mobile-web-app-title" content="Peter Fernandes | Smart Finance">
+    <title>Peter Fernandes | Smart Finance</title>
     
     <!-- Manifest -->
     <link rel="manifest" href="./manifest.json">
@@ -1099,7 +1099,7 @@
     <!-- Tab: Historial -->
     <div id="tab-historial" class="tab-content safe-top">
         <div class="print-header" style="display: none;">
-            <h1 style="text-align: center; margin-bottom: 10px;">Reporte de Nóminas</h1>
+            <h1 style="text-align: center; margin-bottom: 10px;">Official Financial Report - Peter Fernandes</h1>
             <p id="print-year-title" style="text-align: center; color: #666; margin-bottom: 20px;"></p>
         </div>
         
@@ -1402,6 +1402,11 @@
                 Exportar Datos (JSON)
             </button>
             
+            <button onclick="exportPayrollHistoryToCSV()" style="width: 100%; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: #217346; color: white; border: none; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+                Exportar a Excel (CSV)
+            </button>
+            
             <button onclick="document.getElementById('import-backup-file').click()" style="width: 100%; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: transparent; color: var(--primary); border: 1px solid var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
                 Importar Datos
@@ -1425,10 +1430,10 @@
                 </div>
             </div>
             
-            <div style="background: var(--bg-input); border-radius: 10px; padding: 14px;">
+            <div style="background: var(--bg-input); border-radius: 10px; padding: 14px; margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--text-secondary); font-size: 13px;">Versión</span>
-                    <span style="font-size: 13px; font-weight: 500;">v22</span>
+                    <span style="font-size: 13px; font-weight: 500;">v36</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--text-secondary); font-size: 13px;">Almacenamiento</span>
@@ -1438,6 +1443,27 @@
                     <span style="color: var(--text-secondary); font-size: 13px;">Formato Moneda</span>
                     <span style="font-size: 13px; font-weight: 500;">EUR (es-ES)</span>
                 </div>
+            </div>
+            
+            <!-- Privacy Notice -->
+            <div style="background: var(--bg-input); border-radius: 10px; padding: 14px; margin-bottom: 12px;">
+                <p style="color: var(--text-secondary); font-size: 11px; line-height: 1.5; margin-bottom: 0;">
+                    🔒 <strong style="color: var(--text-primary);">Privacidad:</strong> Todos tus datos se almacenan localmente en tu dispositivo. No se envían a ningún servidor externo.
+                </p>
+            </div>
+            
+            <!-- Ownership & Credits -->
+            <div style="background: linear-gradient(135deg, rgba(108, 92, 231, 0.1), rgba(0, 212, 170, 0.1)); border-radius: 10px; padding: 14px; border: 1px solid rgba(108, 92, 231, 0.3);">
+                <p style="color: var(--purple); font-size: 12px; font-weight: 600; margin-bottom: 8px;">✨ Propiedad y Creación</p>
+                <p style="color: var(--text-primary); font-size: 12px; line-height: 1.6; margin-bottom: 6px;">
+                    Esta aplicación es de propiedad exclusiva de <strong>Peter Fernandes</strong>.
+                </p>
+                <p style="color: var(--primary); font-size: 11px; font-style: italic; margin-bottom: 6px;">
+                    Crafted by Peter Fernandes | Built for Precision
+                </p>
+                <p style="color: var(--text-secondary); font-size: 11px;">
+                    Año de Creación: 2026
+                </p>
             </div>
         </div>
         
@@ -1599,6 +1625,13 @@
             Ajustes
         </button>
     </nav>
+    
+    <!-- Author Signature Footer -->
+    <div class="author-footer no-print" style="position: fixed; bottom: 70px; left: 0; right: 0; text-align: center; padding: 6px 0; background: linear-gradient(to top, var(--bg-dark) 0%, transparent 100%); pointer-events: none; z-index: 99;">
+        <p style="font-size: 9px; color: var(--text-secondary); opacity: 0.6; letter-spacing: 0.5px;">
+            Crafted by Peter Fernandes | Built for Precision
+        </p>
+    </div>
     
     <script src="./script.js" defer></script>
 </body>
