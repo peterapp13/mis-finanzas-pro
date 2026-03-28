@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v27 -->
+<!-- Updated: 2025-07-28-v28 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -469,10 +469,23 @@
         
         /* ==================== PRINT STYLES ==================== */
         @media print {
-            /* 1. Force Landscape Orientation */
+            /* 1. Force Landscape Orientation - Multiple approaches for browser compatibility */
             @page {
-                size: landscape;
+                size: A4 landscape;
                 margin: 0.5cm;
+            }
+            
+            /* Additional @page rules for better browser support */
+            @page :first {
+                size: A4 landscape;
+            }
+            
+            @page :left {
+                size: A4 landscape;
+            }
+            
+            @page :right {
+                size: A4 landscape;
             }
             
             /* 2. Reset body and html */
