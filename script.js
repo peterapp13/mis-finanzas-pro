@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v36
+// Version: 2025-07-28-v37
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -6,6 +6,176 @@ const EXPENSES_KEY = 'mis-finanzas-pro-expenses';
 const LOANS_KEY = 'mis-finanzas-pro-loans';
 const SAVINGS_FUND_KEY = 'mis-finanzas-pro-savings-fund';
 const SAVINGS_HISTORY_KEY = 'mis-finanzas-pro-savings-history';
+const PIN_KEY = 'app_security_pin';
+
+// ==================== PIN SECURITY SYSTEM ====================
+let currentPinInput = '';
+
+// Check security on app load
+function initSecurityCheck() {
+    const savedPin = localStorage.getItem(PIN_KEY);
+    
+    if (!savedPin) {
+        // No PIN set - show setup screen
+        showPinSetupScreen();
+    } else {
+        // PIN exists - show lock screen
+        showLockScreen();
+    }
+}
+
+function showPinSetupScreen() {
+    document.getElementById('pin-setup-screen').classList.remove('hidden');
+    document.getElementById('lock-screen').classList.add('hidden');
+    hideAppContent();
+}
+
+function showLockScreen() {
+    document.getElementById('lock-screen').classList.remove('hidden');
+    document.getElementById('pin-setup-screen').classList.add('hidden');
+    hideAppContent();
+    currentPinInput = '';
+    updatePinDisplay();
+}
+
+function hideAppContent() {
+    // Hide tab bar and all content
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.visibility = 'hidden';
+    });
+    const tabBar = document.querySelector('.tab-bar');
+    if (tabBar) tabBar.style.visibility = 'hidden';
+    const footer = document.querySelector('.author-footer');
+    if (footer) footer.style.visibility = 'hidden';
+}
+
+function showAppContent() {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.visibility = 'visible';
+    });
+    const tabBar = document.querySelector('.tab-bar');
+    if (tabBar) tabBar.style.visibility = 'visible';
+    const footer = document.querySelector('.author-footer');
+    if (footer) footer.style.visibility = 'visible';
+}
+
+function savePinSetup() {
+    const pin1 = document.getElementById('setup-pin-1').value;
+    const pin2 = document.getElementById('setup-pin-2').value;
+    
+    if (pin1.length !== 4) {
+        alert('⚠️ El PIN debe tener 4 dígitos');
+        return;
+    }
+    
+    if (pin1 !== pin2) {
+        alert('❌ Los PINs no coinciden. Inténtalo de nuevo.');
+        document.getElementById('setup-pin-2').value = '';
+        return;
+    }
+    
+    // Save PIN
+    localStorage.setItem(PIN_KEY, pin1);
+    
+    // Hide setup screen and show app
+    document.getElementById('pin-setup-screen').classList.add('hidden');
+    showAppContent();
+    
+    alert('✅ PIN configurado correctamente\n\n🔒 Tu aplicación ahora está protegida.');
+}
+
+function enterPinDigit(digit) {
+    if (currentPinInput.length < 4) {
+        currentPinInput += digit;
+        updatePinDisplay();
+        
+        // Auto-verify when 4 digits entered
+        if (currentPinInput.length === 4) {
+            setTimeout(verifyPin, 200);
+        }
+    }
+}
+
+function deletePinDigit() {
+    if (currentPinInput.length > 0) {
+        currentPinInput = currentPinInput.slice(0, -1);
+        updatePinDisplay();
+    }
+    // Clear error
+    document.getElementById('pin-error').textContent = '';
+}
+
+function updatePinDisplay() {
+    const dots = document.querySelectorAll('#pin-display .pin-dot');
+    dots.forEach((dot, index) => {
+        if (index < currentPinInput.length) {
+            dot.style.background = 'var(--primary)';
+            dot.style.borderColor = 'var(--primary)';
+        } else {
+            dot.style.background = 'var(--bg-input)';
+            dot.style.borderColor = 'var(--text-secondary)';
+        }
+    });
+}
+
+function verifyPin() {
+    const savedPin = localStorage.getItem(PIN_KEY);
+    
+    if (currentPinInput === savedPin) {
+        // Correct PIN - unlock app
+        document.getElementById('lock-screen').classList.add('hidden');
+        showAppContent();
+        currentPinInput = '';
+    } else {
+        // Wrong PIN
+        document.getElementById('pin-error').textContent = 'PIN incorrecto. Inténtalo de nuevo.';
+        currentPinInput = '';
+        updatePinDisplay();
+        
+        // Shake animation effect
+        const display = document.getElementById('pin-display');
+        display.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+            display.style.animation = '';
+        }, 500);
+    }
+}
+
+// Change PIN from Settings
+function showChangePinModal() {
+    const currentPin = prompt('🔐 Introduce tu PIN actual (4 dígitos):');
+    
+    if (currentPin === null) return; // Cancelled
+    
+    const savedPin = localStorage.getItem(PIN_KEY);
+    
+    if (currentPin !== savedPin) {
+        alert('❌ PIN incorrecto');
+        return;
+    }
+    
+    const newPin = prompt('🔑 Introduce el nuevo PIN (4 dígitos):');
+    
+    if (newPin === null) return; // Cancelled
+    
+    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+        alert('⚠️ El PIN debe tener exactamente 4 dígitos numéricos');
+        return;
+    }
+    
+    const confirmPin = prompt('🔑 Confirma el nuevo PIN:');
+    
+    if (confirmPin === null) return; // Cancelled
+    
+    if (newPin !== confirmPin) {
+        alert('❌ Los PINs no coinciden');
+        return;
+    }
+    
+    // Save new PIN
+    localStorage.setItem(PIN_KEY, newPin);
+    alert('✅ PIN actualizado correctamente');
+}
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -97,6 +267,9 @@ let chart = null;
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', () => {
+    // Security check first
+    initSecurityCheck();
+    
     initPayrollTable();
     initSSTable();
     loadSavedPercentages(); // Load saved percentages from localStorage
