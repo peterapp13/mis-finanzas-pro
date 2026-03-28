@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v20
+// Version: 2025-07-28-v22
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -11,17 +11,35 @@ const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
 const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 // ==================== GLOBAL CURRENCY FORMATTER ====================
-// European format: 19578.5 -> "19.578,50 €"
-const currencyFormatter = new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-});
+// European format: 3500.5 -> "3.500,50 €" (always with thousands separator)
+
+// Manual formatter to ensure consistent European format across all browsers
+function formatEuropeanNumber(number, decimals = 2) {
+    if (number === null || number === undefined || isNaN(number)) return '0,00';
+    
+    // Round to specified decimals
+    const fixed = Number(number).toFixed(decimals);
+    
+    // Split into integer and decimal parts
+    const parts = fixed.split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts[1] || '00';
+    
+    // Add thousands separator (.)
+    const withThousands = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    // Combine with comma as decimal separator
+    return withThousands + ',' + decimalPart;
+}
 
 function formatCurrency(number) {
     if (number === null || number === undefined || isNaN(number)) return '0,00 €';
-    return currencyFormatter.format(number);
+    return formatEuropeanNumber(number, 2) + ' €';
+}
+
+function formatNumber(number) {
+    if (number === null || number === undefined || isNaN(number)) return '0,00';
+    return formatEuropeanNumber(number, 2);
 }
 
 // Payroll concepts configuration
@@ -115,8 +133,9 @@ function calculateRow(conceptId) {
     const abonar = unidad * precio;
     const total = abonar - deducir;
     
-    document.getElementById(`${conceptId}_abonar`).textContent = abonar.toFixed(2);
-    document.getElementById(`${conceptId}_total`).textContent = total.toFixed(2);
+    // Use European format for display (1.234,56)
+    document.getElementById(`${conceptId}_abonar`).textContent = formatNumber(abonar);
+    document.getElementById(`${conceptId}_total`).textContent = formatNumber(total);
     
     calculateTotals();
 }
@@ -170,7 +189,7 @@ function calculateSSRow(conceptId) {
     const percent = parseFloat(document.getElementById(`${conceptId}_percent`).value) || 0;
     
     const cuota = base * (percent / 100);
-    document.getElementById(`${conceptId}_cuota`).textContent = cuota.toFixed(2);
+    document.getElementById(`${conceptId}_cuota`).textContent = formatNumber(cuota);
     
     calculateTotals();
 }
@@ -181,11 +200,12 @@ function updateSyncedSSBases(totalBruto) {
         if (concept.syncWithBruto && !ssManuallyEdited[concept.id]) {
             const baseInput = document.getElementById(`${concept.id}_base`);
             if (baseInput) {
+                // Keep input values as simple numbers for calculation
                 baseInput.value = totalBruto.toFixed(2);
-                // Recalculate cuota for this row
+                // Recalculate cuota for this row - use formatNumber for display
                 const percent = parseFloat(document.getElementById(`${concept.id}_percent`).value) || 0;
                 const cuota = totalBruto * (percent / 100);
-                document.getElementById(`${concept.id}_cuota`).textContent = cuota.toFixed(2);
+                document.getElementById(`${concept.id}_cuota`).textContent = formatNumber(cuota);
             }
         }
     });
