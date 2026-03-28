@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v30
+// Version: 2025-07-28-v31
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1203,57 +1203,39 @@ function updateDashboardMonths() {
     const monthSelect = document.getElementById('dashboard-month');
     const selectedYear = parseInt(yearSelect.value);
     const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1; // 1-12
     const data = getData();
     
-    // Get records for selected year
+    // Filter records for selected year
     const yearRecords = data.filter(r => r.year === selectedYear);
     
-    // Build a map of existing records by month
-    const recordsByMonth = {};
-    yearRecords.forEach(record => {
-        recordsByMonth[record.month] = record;
-    });
-    
-    // Clear and populate month selector with ALL months
+    // Clear month selector
     monthSelect.innerHTML = '';
     
     // Add "Nómina Actual" option only for current year
     if (selectedYear === currentYear) {
         const currentOption = document.createElement('option');
         currentOption.value = 'current';
-        currentOption.textContent = '📝 Nómina Actual (en edición)';
+        currentOption.textContent = 'Nómina Actual';
         monthSelect.appendChild(currentOption);
     }
     
-    // Add all 12 months (descending order - December to January)
-    for (let m = 12; m >= 1; m--) {
-        const option = document.createElement('option');
-        const hasRecord = recordsByMonth[m];
-        
-        if (hasRecord) {
-            option.value = hasRecord.id;
-            option.textContent = `${months[m - 1]} ✓`;
-            option.style.color = 'var(--primary)';
-        } else {
-            option.value = `empty-${m}`;
-            option.textContent = `${months[m - 1]} (sin datos)`;
-            option.style.color = 'var(--text-secondary)';
-        }
-        
-        monthSelect.appendChild(option);
-    }
+    // Sort by month descending (most recent first)
+    yearRecords.sort((a, b) => b.month - a.month);
     
-    // Set default selection to current month if viewing current year
-    if (selectedYear === currentYear) {
-        // Select "Nómina Actual" for current month
-        monthSelect.value = 'current';
-    } else {
-        // For other years, select the most recent month with data, or December
-        const mostRecentRecord = yearRecords.sort((a, b) => b.month - a.month)[0];
-        if (mostRecentRecord) {
-            monthSelect.value = mostRecentRecord.id;
-        }
+    // Add months that have records
+    yearRecords.forEach(record => {
+        const option = document.createElement('option');
+        option.value = record.id;
+        option.textContent = months[record.month - 1];
+        monthSelect.appendChild(option);
+    });
+    
+    // If no records and not current year, show message
+    if (yearRecords.length === 0 && selectedYear !== currentYear) {
+        const emptyOption = document.createElement('option');
+        emptyOption.value = 'empty';
+        emptyOption.textContent = 'Sin registros';
+        monthSelect.appendChild(emptyOption);
     }
     
     updateDashboard();
@@ -1262,12 +1244,14 @@ function updateDashboardMonths() {
 function updateDashboard() {
     // Initialize selectors on first load
     const yearSelect = document.getElementById('dashboard-year');
-    if (yearSelect && yearSelect.options.length === 0) {
+    if (!yearSelect || yearSelect.options.length === 0) {
         initDashboardSelectors();
         return;
     }
     
     const monthSelect = document.getElementById('dashboard-month');
+    if (!monthSelect) return;
+    
     const data = getData();
     const selectedValue = monthSelect.value;
     
@@ -1276,16 +1260,19 @@ function updateDashboard() {
     let periodLabel = 'Sin datos';
     
     if (selectedValue === 'current') {
-        // Get from current payroll form
-        netIncome = parseFloat(document.getElementById('total-neto')?.textContent?.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+        // Get from current payroll form - parse the formatted currency
+        const netoElement = document.getElementById('total-neto');
+        if (netoElement) {
+            const netoText = netoElement.textContent || '0';
+            // Remove currency formatting: "1.234,56 €" -> 1234.56
+            netIncome = parseFloat(netoText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+        }
         periodLabel = 'Nómina Actual';
-    } else if (selectedValue.startsWith('empty-')) {
-        // Empty month selected
-        const monthNum = parseInt(selectedValue.replace('empty-', ''));
-        const selectedYear = parseInt(yearSelect.value);
+    } else if (selectedValue === 'empty') {
         netIncome = 0;
-        periodLabel = `${months[monthNum - 1]} ${selectedYear} (sin datos)`;
+        periodLabel = 'Sin registros';
     } else {
+        // Find the record by ID
         const record = data.find(r => r.id === selectedValue);
         if (record) {
             netIncome = record.totalNeto || 0;
