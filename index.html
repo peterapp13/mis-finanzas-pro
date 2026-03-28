@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v24 -->
+<!-- Updated: 2025-07-28-v25 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -469,85 +469,142 @@
         
         /* ==================== PRINT STYLES ==================== */
         @media print {
+            /* 1. Force Landscape Orientation */
             @page {
                 size: landscape;
-                margin: 1cm;
+                margin: 0.5cm;
             }
             
-            /* Hide UI elements */
+            /* 2. Reset Global Styles for Print - Force white background, black text */
+            *, *::before, *::after {
+                background: white !important;
+                color: black !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            html, body {
+                background: white !important;
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 9pt !important;
+            }
+            
+            /* 3. Hide all UI Clutter */
             .tab-bar,
             .no-print,
             .delete-btn,
             button,
             select,
-            .card:not(.print-card),
+            .card,
+            .safe-top,
             #tab-nomina,
             #tab-bancos,
             #tab-gastos,
             #tab-prestamos,
             #tab-dashboard,
-            #tab-ajustes {
+            #tab-ajustes,
+            #savings-fund-modal {
                 display: none !important;
             }
             
-            /* Show only historial tab */
+            /* 4. Show only historial tab */
             #tab-historial {
                 display: block !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                background: white !important;
             }
             
-            /* Show print header */
+            /* 5. Show print header */
             .print-header {
                 display: block !important;
-            }
-            
-            /* Body styling */
-            body {
                 background: white !important;
-                color: black !important;
-                font-size: 10pt !important;
-                padding: 0 !important;
+                padding: 10px 0 !important;
+                margin-bottom: 15px !important;
             }
             
-            /* Table styling for print */
+            .print-header h1 {
+                font-size: 16pt !important;
+                font-weight: bold !important;
+                color: black !important;
+                margin: 0 0 5px 0 !important;
+            }
+            
+            .print-header p {
+                font-size: 11pt !important;
+                color: #333 !important;
+                margin: 0 !important;
+            }
+            
+            /* 6. Table container - remove scroll wrapper */
+            .table-scroll {
+                overflow: visible !important;
+                max-height: none !important;
+            }
+            
+            /* 7. Table Styling for Paper */
             #historial-table {
                 width: 100% !important;
                 min-width: unset !important;
                 border-collapse: collapse !important;
+                background: white !important;
+                color: black !important;
                 font-size: 8pt !important;
+                table-layout: auto !important;
             }
             
             #historial-table th,
             #historial-table td {
                 border: 1px solid #333 !important;
-                padding: 4px 6px !important;
-                background: white !important;
                 color: black !important;
+                background: white !important;
+                padding: 4px 6px !important;
+                font-size: 8pt !important;
+                text-align: center !important;
             }
             
             #historial-table th {
                 background: #f0f0f0 !important;
                 font-weight: bold !important;
+                color: black !important;
             }
             
-            #historial-table tr:nth-child(even) {
+            #historial-table tr:nth-child(even) td {
                 background: #f9f9f9 !important;
             }
             
-            /* Hide action columns */
+            /* 8. TOTALES row styling */
+            #historial-table tr:last-child td {
+                background: #e0e0e0 !important;
+                font-weight: bold !important;
+                border-top: 2px solid black !important;
+            }
+            
+            /* 9. Hide action columns (last column with delete buttons) */
             #historial-table th:last-child,
             #historial-table td:last-child {
                 display: none !important;
             }
             
-            /* Card styling */
-            .card {
-                box-shadow: none !important;
-                border: 1px solid #ddd !important;
-                margin: 0 !important;
+            /* 10. Hide UI elements inside historial */
+            #tab-historial h1,
+            #tab-historial > p,
+            #tab-historial .card,
+            .legend-card {
+                display: none !important;
             }
             
-            /* Links */
+            /* 11. Links */
             a {
                 color: black !important;
                 text-decoration: none !important;
