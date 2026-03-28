@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v33
+// Version: 2025-07-28-v34
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMonthPicker();
     updateDateDisplay();
     initAllYearDropdowns(); // Initialize all year dropdowns (2020-2045)
+    initDashboardSelectors(); // Initialize Dashboard selectors with most recent record
     updateBanksList();
     updateExpensesList();
     updateLoansList();
@@ -381,7 +382,15 @@ function switchTab(tab) {
     if (tab === 'bancos') updateBanksList();
     if (tab === 'gastos') updateExpensesList();
     if (tab === 'prestamos') updateLoansList();
-    if (tab === 'dashboard') updateDashboard();
+    if (tab === 'dashboard') {
+        // Initialize selectors if not already done
+        const monthSelect = document.getElementById('dashboard-month');
+        if (!monthSelect || monthSelect.options.length === 0) {
+            initDashboardSelectors();
+        } else {
+            updateDashboard();
+        }
+    }
     if (tab === 'stats') updateStats();
     if (tab === 'historial') updateHistorial();
 }
@@ -1212,10 +1221,12 @@ function initDashboardSelectors() {
     // Find the most recent record
     let mostRecentRecord = null;
     if (data.length > 0) {
-        mostRecentRecord = data.sort((a, b) => {
+        // Create a copy to avoid mutating the original array
+        const sortedData = [...data].sort((a, b) => {
             if (a.year !== b.year) return b.year - a.year;
             return b.month - a.month;
-        })[0];
+        });
+        mostRecentRecord = sortedData[0];
     }
     
     // Initialize year dropdown
@@ -1224,20 +1235,23 @@ function initDashboardSelectors() {
     const defaultYear = mostRecentRecord ? mostRecentRecord.year : currentYear;
     populateYearDropdown(yearSelect, defaultYear);
     
-    // Populate months for selected year
+    // Populate months for selected year - this will add both "Nómina Actual" and saved records
     updateDashboardMonthsForYear(defaultYear);
     
-    // If we have a most recent record, select it
-    if (mostRecentRecord) {
+    // If we have a most recent record for the selected year, select it instead of "Nómina Actual"
+    if (mostRecentRecord && mostRecentRecord.year === defaultYear) {
         monthSelect.value = mostRecentRecord.id;
     }
     
+    // Force update dashboard with selected values
     updateDashboard();
 }
 
 // Helper function to populate months for a specific year
 function updateDashboardMonthsForYear(targetYear) {
     const monthSelect = document.getElementById('dashboard-month');
+    if (!monthSelect) return;
+    
     const currentYear = new Date().getFullYear();
     const data = getData();
     
@@ -1256,10 +1270,10 @@ function updateDashboardMonthsForYear(targetYear) {
     }
     
     // Sort by month descending (most recent first)
-    yearRecords.sort((a, b) => b.month - a.month);
+    const sortedRecords = [...yearRecords].sort((a, b) => b.month - a.month);
     
     // Add months that have records
-    yearRecords.forEach(record => {
+    sortedRecords.forEach(record => {
         const option = document.createElement('option');
         option.value = record.id;
         option.textContent = months[record.month - 1];
