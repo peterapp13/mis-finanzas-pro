@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v16
+// Version: 2025-07-28-v17
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -9,6 +9,20 @@ const SAVINGS_HISTORY_KEY = 'mis-finanzas-pro-savings-history';
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+// ==================== GLOBAL CURRENCY FORMATTER ====================
+// European format: 19578.5 -> "19.578,50 €"
+const currencyFormatter = new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
+function formatCurrency(number) {
+    if (number === null || number === undefined || isNaN(number)) return '0,00 €';
+    return currencyFormatter.format(number);
+}
 
 // Payroll concepts configuration
 const concepts = [
@@ -210,19 +224,19 @@ function calculateTotals() {
     const totalNeto = totalBruto - totalDeducciones;
     
     // Update IRPF Section boxes
-    document.getElementById('irpf_remuneracion').value = totalBruto.toFixed(2) + ' €';
-    document.getElementById('irpf_retencion').textContent = irpfAmount.toFixed(2) + ' €';
+    document.getElementById('irpf_remuneracion').value = formatCurrency(totalBruto);
+    document.getElementById('irpf_retencion').textContent = formatCurrency(irpfAmount);
     
     // Update SS total
-    document.getElementById('ss-total-cuota').textContent = ssAmount.toFixed(2) + ' €';
+    document.getElementById('ss-total-cuota').textContent = formatCurrency(ssAmount);
     
     // Update Total Bruto display
-    document.getElementById('total-bruto').textContent = totalBruto.toFixed(2) + ' €';
+    document.getElementById('total-bruto').textContent = formatCurrency(totalBruto);
     
     // Update RESUMEN DE TOTALES
-    document.getElementById('resumen-abonar').textContent = totalBruto.toFixed(2) + ' €';
-    document.getElementById('resumen-deducir').textContent = '-' + totalDeducciones.toFixed(2) + ' €';
-    document.getElementById('resumen-liquido').textContent = totalNeto.toFixed(2) + ' €';
+    document.getElementById('resumen-abonar').textContent = formatCurrency(totalBruto);
+    document.getElementById('resumen-deducir').textContent = '-' + formatCurrency(totalDeducciones).replace('€', '').trim() + ' €';
+    document.getElementById('resumen-liquido').textContent = formatCurrency(totalNeto);
     
     return { totalBruto, irpfPercent, irpfAmount, ssAmount, totalDeducciones, totalNeto };
 }
@@ -706,7 +720,7 @@ function updateExpensesList() {
         container.appendChild(row);
     });
     
-    document.getElementById('expenses-monthly-total').textContent = monthlyTotal.toFixed(2) + ' €';
+    document.getElementById('expenses-monthly-total').textContent = formatCurrency(monthlyTotal);
 }
 
 // ==================== LOANS MANAGEMENT ====================
@@ -771,7 +785,7 @@ function calculateLoanTotal() {
     const installments = parseInt(document.getElementById('loan-installments').value) || 0;
     const payment = parseFloat(document.getElementById('loan-payment').value) || 0;
     const total = installments * payment;
-    document.getElementById('loan-total-display').textContent = total.toFixed(2) + ' €';
+    document.getElementById('loan-total-display').textContent = formatCurrency(total);
 }
 
 function saveLoan() {
@@ -999,8 +1013,8 @@ function updateLoansList() {
     });
     
     // Update summary
-    document.getElementById('loans-total-debt').textContent = totalDebt.toFixed(2) + ' €';
-    document.getElementById('loans-monthly-payment').textContent = totalMonthly.toFixed(2) + ' €';
+    document.getElementById('loans-total-debt').textContent = formatCurrency(totalDebt);
+    document.getElementById('loans-monthly-payment').textContent = formatCurrency(totalMonthly);
 }
 
 // ==================== DASHBOARD ====================
@@ -1095,7 +1109,7 @@ function updateDashboard() {
         }
     }
     
-    document.getElementById('dashboard-net-income').textContent = netIncome.toFixed(2) + ' €';
+    document.getElementById('dashboard-net-income').textContent = formatCurrency(netIncome);
     document.getElementById('dashboard-period-label').textContent = periodLabel;
     
     // Calculate 50/30/20 rule
@@ -1129,29 +1143,29 @@ function updateDashboard() {
     };
     
     // Necesidades
-    document.getElementById('rule-necesidades-target').textContent = targets.necesidades.toFixed(2) + ' €';
-    document.getElementById('rule-necesidades-actual').textContent = categoryTotals.necesidades.toFixed(2) + ' €';
+    document.getElementById('rule-necesidades-target').textContent = formatCurrency(targets.necesidades);
+    document.getElementById('rule-necesidades-actual').textContent = formatCurrency(categoryTotals.necesidades);
     const necesidadesPercent = targets.necesidades > 0 ? (categoryTotals.necesidades / targets.necesidades) * 100 : 0;
     document.getElementById('rule-necesidades-bar').style.width = Math.min(150, necesidadesPercent) + '%';
     const necesidadesLibre = updateRuleStatus('necesidades', categoryTotals.necesidades, targets.necesidades);
     
     // Ocio
-    document.getElementById('rule-ocio-target').textContent = targets.ocio.toFixed(2) + ' €';
-    document.getElementById('rule-ocio-actual').textContent = categoryTotals.ocio.toFixed(2) + ' €';
+    document.getElementById('rule-ocio-target').textContent = formatCurrency(targets.ocio);
+    document.getElementById('rule-ocio-actual').textContent = formatCurrency(categoryTotals.ocio);
     const ocioPercent = targets.ocio > 0 ? (categoryTotals.ocio / targets.ocio) * 100 : 0;
     document.getElementById('rule-ocio-bar').style.width = Math.min(150, ocioPercent) + '%';
     const ocioLibre = updateRuleStatus('ocio', categoryTotals.ocio, targets.ocio);
     
     // Ahorro
-    document.getElementById('rule-ahorro-target').textContent = targets.ahorro.toFixed(2) + ' €';
-    document.getElementById('rule-ahorro-actual').textContent = categoryTotals.ahorro.toFixed(2) + ' €';
+    document.getElementById('rule-ahorro-target').textContent = formatCurrency(targets.ahorro);
+    document.getElementById('rule-ahorro-actual').textContent = formatCurrency(categoryTotals.ahorro);
     const ahorroPercent = targets.ahorro > 0 ? (categoryTotals.ahorro / targets.ahorro) * 100 : 0;
     document.getElementById('rule-ahorro-bar').style.width = Math.min(150, ahorroPercent) + '%';
     updateRuleStatus('ahorro', categoryTotals.ahorro, targets.ahorro);
     
     // Calculate Dinero Disponible (Necesidades libre + Ocio libre, EXCLUDING Ahorro)
     const dineroDisponible = Math.max(0, necesidadesLibre) + Math.max(0, ocioLibre);
-    document.getElementById('dashboard-available-money').textContent = dineroDisponible.toFixed(2) + ' €';
+    document.getElementById('dashboard-available-money').textContent = formatCurrency(dineroDisponible);
     
     // Update bank breakdown
     updateBankBreakdown();
@@ -1173,12 +1187,12 @@ function updateRuleStatus(category, actual, target) {
         statusEl.style.color = 'var(--text-secondary)';
         return 0;
     } else if (diff >= 0) {
-        statusEl.textContent = `✓ ${diff.toFixed(0)}€ libre`;
+        statusEl.textContent = `✓ ${formatCurrency(diff).replace(' €', '€')} libre`;
         statusEl.style.background = 'rgba(0, 212, 170, 0.2)';
         statusEl.style.color = 'var(--primary)';
         return diff;
     } else {
-        statusEl.textContent = `⚠ ${Math.abs(diff).toFixed(0)}€ exceso`;
+        statusEl.textContent = `⚠ ${formatCurrency(Math.abs(diff)).replace(' €', '€')} exceso`;
         statusEl.style.background = 'rgba(255, 107, 107, 0.2)';
         statusEl.style.color = 'var(--danger)';
         return diff;
@@ -1224,12 +1238,12 @@ function updateBankBreakdown() {
         let itemsHtml = '';
         bankExpenses.forEach(e => {
             const monthly = e.frequency === 'anual' ? e.amount / 12 : e.amount;
-            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span style="color: var(--text-secondary);">${e.name}</span><span>${monthly.toFixed(2)} €</span></div>`;
+            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span style="color: var(--text-secondary);">${e.name}</span><span>${formatCurrency(monthly)}</span></div>`;
         });
         bankLoans.forEach(l => {
             const status = calculateLoanStatus(l);
             if (status.remainingInstallments > 0) {
-                itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span style="color: var(--purple);">📋 ${l.description}</span><span>${l.payment.toFixed(2)} €</span></div>`;
+                itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span style="color: var(--purple);">📋 ${l.description}</span><span>${formatCurrency(l.payment)}</span></div>`;
             }
         });
         
@@ -1240,7 +1254,7 @@ function updateBankBreakdown() {
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <span style="font-weight: 600;">🏦 ${bank.name}</span>
-                <span style="font-weight: bold; color: var(--primary);">${total.toFixed(2)} €</span>
+                <span style="font-weight: bold; color: var(--primary);">${formatCurrency(total)}</span>
             </div>
             ${itemsHtml}
         `;
@@ -1295,7 +1309,9 @@ function updateAnnualSummary() {
     document.getElementById('dashboard-annual-year').textContent = selectedYear;
     
     const monthsCount = yearData.length;
+    const isComplete = monthsCount === 12;
     
+    // Calculate actual accumulated values
     let totalBruto = 0;
     let totalIrpfRetenido = 0;
     let totalSS = 0;
@@ -1310,7 +1326,6 @@ function updateAnnualSummary() {
     let proyeccionBruto = 0;
     let proyeccionSS = 0;
     let proyeccionRetenido = 0;
-    let isEstimated = true;
     
     if (monthsCount > 0) {
         const avgBruto = totalBruto / monthsCount;
@@ -1320,66 +1335,106 @@ function updateAnnualSummary() {
         proyeccionBruto = avgBruto * 12;
         proyeccionSS = avgSS * 12;
         proyeccionRetenido = avgRetenido * 12;
-        isEstimated = monthsCount < 12;
     }
     
-    // Update Bruto Anual
-    document.getElementById('dashboard-annual-bruto').textContent = proyeccionBruto.toFixed(2) + ' €';
+    // Determine which values to use for calculations
+    const calcBruto = isComplete ? totalBruto : proyeccionBruto;
+    const calcSS = isComplete ? totalSS : proyeccionSS;
+    const calcRetenido = isComplete ? totalIrpfRetenido : proyeccionRetenido;
     
-    // Update estimated label
+    // Update Bruto display (accumulated as main, projection as subtext)
+    document.getElementById('dashboard-annual-bruto').textContent = formatCurrency(totalBruto);
+    
+    const brutoProjection = document.getElementById('dashboard-bruto-projection');
     const estimatedLabel = document.getElementById('dashboard-annual-estimated-label');
-    if (estimatedLabel) {
-        if (isEstimated && monthsCount > 0) {
-            estimatedLabel.textContent = '(Estimado)';
-            estimatedLabel.style.display = 'block';
-        } else if (monthsCount === 12) {
-            estimatedLabel.textContent = '(Completo)';
-            estimatedLabel.style.display = 'block';
-        } else {
-            estimatedLabel.style.display = 'none';
+    
+    if (isComplete) {
+        if (brutoProjection) brutoProjection.style.display = 'none';
+        if (estimatedLabel) estimatedLabel.style.display = 'none';
+    } else {
+        if (brutoProjection) {
+            brutoProjection.textContent = `Proyección: ${formatCurrency(proyeccionBruto)}`;
+            brutoProjection.style.display = 'block';
+        }
+        if (estimatedLabel) {
+            estimatedLabel.textContent = monthsCount > 0 ? '(Estimado)' : '';
+            estimatedLabel.style.display = monthsCount > 0 ? 'block' : 'none';
         }
     }
     
     // Calculate Base Liquidable (taxable base)
-    // Bruto - 7550 (minimum personal + labor deductions) - S.S. contributions
     const DEDUCCION_MINIMA = 7550;
-    let baseLiquidable = proyeccionBruto - DEDUCCION_MINIMA - proyeccionSS;
+    let baseLiquidable = calcBruto - DEDUCCION_MINIMA - calcSS;
     if (baseLiquidable < 0) baseLiquidable = 0;
     
     // Calculate Legal IRPF from Base Liquidable
     const irpfLegalTotal = calculateIRPFLegal(baseLiquidable);
     
     // Calculate Tax Return Result
-    // Positive = you owe money (A Pagar)
-    // Negative = refund (A Devolver)
-    const resultadoRenta = irpfLegalTotal - proyeccionRetenido;
+    const resultadoRenta = irpfLegalTotal - calcRetenido;
     
-    // Update IRPF Retenido (projected annual)
-    document.getElementById('dashboard-annual-irpf').textContent = proyeccionRetenido.toFixed(2) + ' €';
+    // Update IRPF Retenido (accumulated as main, projection as subtext)
+    document.getElementById('dashboard-annual-irpf').textContent = formatCurrency(totalIrpfRetenido);
+    
+    const irpfProjection = document.getElementById('dashboard-irpf-projection');
+    if (irpfProjection) {
+        if (isComplete) {
+            irpfProjection.style.display = 'none';
+        } else {
+            irpfProjection.textContent = `Proy: ${formatCurrency(proyeccionRetenido)}`;
+            irpfProjection.style.display = 'block';
+        }
+    }
     
     // Update IRPF Legal Total
-    document.getElementById('dashboard-annual-irpf-legal').textContent = irpfLegalTotal.toFixed(2) + ' €';
+    document.getElementById('dashboard-annual-irpf-legal').textContent = formatCurrency(irpfLegalTotal);
     
-    // Update Previsión Renta
+    const irpfLegalLabel = document.getElementById('dashboard-irpf-legal-label');
+    if (irpfLegalLabel) {
+        irpfLegalLabel.textContent = isComplete ? '(Definitivo)' : '(Estimado)';
+    }
+    
+    // Update S.S. (accumulated as main, projection as subtext)
+    document.getElementById('dashboard-annual-ss').textContent = formatCurrency(totalSS);
+    
+    const ssProjection = document.getElementById('dashboard-ss-projection');
+    if (ssProjection) {
+        if (isComplete) {
+            ssProjection.style.display = 'none';
+        } else {
+            ssProjection.textContent = `Proy: ${formatCurrency(proyeccionSS)}`;
+            ssProjection.style.display = 'block';
+        }
+    }
+    
+    // Update Previsión Renta / Resultado Renta
+    const rentaLabel = document.getElementById('dashboard-renta-label');
     const rentaElement = document.getElementById('dashboard-renta-result');
+    const rentaFormula = document.getElementById('dashboard-renta-formula');
+    
+    if (rentaLabel) {
+        rentaLabel.textContent = isComplete ? '📋 Resultado Renta (Definitivo)' : '📋 Previsión Renta';
+    }
+    
+    if (rentaFormula) {
+        rentaFormula.style.display = isComplete ? 'none' : 'block';
+    }
+    
     if (rentaElement) {
         if (monthsCount === 0) {
             rentaElement.textContent = '--';
             rentaElement.style.color = 'var(--text-secondary)';
         } else if (resultadoRenta > 0.01) {
-            rentaElement.textContent = `A Pagar: ${resultadoRenta.toFixed(2)} €`;
+            rentaElement.textContent = `A Pagar: ${formatCurrency(resultadoRenta)}`;
             rentaElement.style.color = 'var(--danger)';
         } else if (resultadoRenta < -0.01) {
-            rentaElement.textContent = `A Devolver: ${Math.abs(resultadoRenta).toFixed(2)} €`;
+            rentaElement.textContent = `A Devolver: ${formatCurrency(Math.abs(resultadoRenta))}`;
             rentaElement.style.color = 'var(--primary)';
         } else {
             rentaElement.textContent = 'Equilibrado';
             rentaElement.style.color = 'var(--text-secondary)';
         }
     }
-    
-    // Update S.S. Acumulada (projected annual)
-    document.getElementById('dashboard-annual-ss').textContent = proyeccionSS.toFixed(2) + ' €';
     
     // Update months info
     const monthsInfo = document.getElementById('dashboard-annual-months-info');
@@ -1388,6 +1443,8 @@ function updateAnnualSummary() {
             monthsInfo.textContent = 'Sin datos archivados para ' + selectedYear;
         } else if (monthsCount === 1) {
             monthsInfo.textContent = 'Basado en 1 mes archivado';
+        } else if (isComplete) {
+            monthsInfo.textContent = '✓ Año completo (12 meses)';
         } else {
             monthsInfo.textContent = `Basado en ${monthsCount} meses archivados`;
         }
@@ -1396,7 +1453,7 @@ function updateAnnualSummary() {
 
 function updateSavingsFundDisplay() {
     const balance = getSavingsFund();
-    document.getElementById('savings-fund-balance').textContent = balance.toFixed(2) + ' €';
+    document.getElementById('savings-fund-balance').textContent = formatCurrency(balance);
     
     // Update history
     const history = getSavingsHistory();
@@ -1424,7 +1481,7 @@ function updateSavingsFundDisplay() {
                 <p style="font-size: 11px; color: var(--text-secondary);">${dateStr}</p>
             </div>
             <span style="font-weight: 600; color: ${isDeposit ? 'var(--primary)' : 'var(--danger)'};">
-                ${isDeposit ? '+' : '-'}${tx.amount.toFixed(2)} €
+                ${isDeposit ? '+' : '-'}${formatCurrency(tx.amount)}
             </span>
         `;
         container.appendChild(row);
@@ -1515,9 +1572,9 @@ function updateStats() {
     const totalNeto = yearData.reduce((sum, r) => sum + r.totalNeto, 0);
     const totalIrpf = yearData.reduce((sum, r) => sum + r.irpfAmount, 0);
     
-    document.getElementById('total-irpf').textContent = totalIrpf.toFixed(2) + ' €';
-    document.getElementById('stats-bruto').textContent = totalBruto.toFixed(2) + ' €';
-    document.getElementById('stats-neto').textContent = totalNeto.toFixed(2) + ' €';
+    document.getElementById('total-irpf').textContent = formatCurrency(totalIrpf);
+    document.getElementById('stats-bruto').textContent = formatCurrency(totalBruto);
+    document.getElementById('stats-neto').textContent = formatCurrency(totalNeto);
     
     // Update table
     if (yearData.length === 0) {
