@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v19
+// Version: 2025-07-28-v20
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1955,4 +1955,144 @@ function setupAutoSelectOnFocus() {
             target.select();
         }
     });
+}
+
+// ==================== SETTINGS - BACKUP FUNCTIONS ====================
+
+// All localStorage keys used by the app
+const ALL_STORAGE_KEYS = [
+    STORAGE_KEY,           // 'mis-finanzas-pro-data' - payroll history
+    BANKS_KEY,             // 'mis-finanzas-pro-banks'
+    EXPENSES_KEY,          // 'mis-finanzas-pro-expenses'
+    LOANS_KEY,             // 'mis-finanzas-pro-loans'
+    SAVINGS_FUND_KEY,      // 'mis-finanzas-pro-savings-fund'
+    SAVINGS_HISTORY_KEY    // 'mis-finanzas-pro-savings-history'
+];
+
+// Export ALL localStorage data as JSON
+function exportAllData() {
+    const backup = {
+        version: 'v20',
+        exportDate: new Date().toISOString(),
+        data: {}
+    };
+    
+    // Collect all data from localStorage
+    ALL_STORAGE_KEYS.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value !== null) {
+            try {
+                // Try to parse as JSON
+                backup.data[key] = JSON.parse(value);
+            } catch (e) {
+                // Store as raw string if not valid JSON
+                backup.data[key] = value;
+            }
+        }
+    });
+    
+    // Create file name with date
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}`;
+    const fileName = `backup_finanzas_${dateStr}.json`;
+    
+    // Create blob and trigger download
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('✅ Copia de seguridad exportada\n\nArchivo: ' + fileName + '\n\nGuárdalo en iCloud Drive o Files para mantenerlo seguro.');
+}
+
+// Import data from JSON backup file
+function importAllData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const backup = JSON.parse(e.target.result);
+            
+            // Validate backup structure
+            if (!backup.data || typeof backup.data !== 'object') {
+                alert('❌ Error: El archivo no tiene un formato válido');
+                return;
+            }
+            
+            // Confirm before overwriting
+            const confirmMsg = `⚠️ IMPORTAR DATOS\n\nEsto reemplazará TODOS tus datos actuales con los del archivo:\n\n📄 ${file.name}\n📅 Fecha backup: ${backup.exportDate ? new Date(backup.exportDate).toLocaleDateString('es-ES') : 'Desconocida'}\n\n¿Estás seguro?`;
+            
+            if (!confirm(confirmMsg)) {
+                event.target.value = ''; // Reset file input
+                return;
+            }
+            
+            // Clear existing data
+            ALL_STORAGE_KEYS.forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            // Import new data
+            Object.keys(backup.data).forEach(key => {
+                const value = backup.data[key];
+                if (typeof value === 'object') {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                    localStorage.setItem(key, value);
+                }
+            });
+            
+            alert('✅ Datos importados correctamente\n\nLa aplicación se recargará ahora.');
+            
+            // Reload app to apply changes
+            window.location.reload();
+            
+        } catch (error) {
+            alert('❌ Error al leer el archivo\n\n' + error.message);
+        }
+    };
+    
+    reader.onerror = function() {
+        alert('❌ Error al leer el archivo');
+    };
+    
+    reader.readAsText(file);
+    
+    // Reset file input for next use
+    event.target.value = '';
+}
+
+// Delete ALL data with double confirmation
+function deleteAllData() {
+    // First confirmation
+    const confirm1 = confirm('⚠️ BORRAR TODOS LOS DATOS\n\n¿Estás seguro de que quieres eliminar TODOS tus datos?\n\nEsto incluye:\n• Historial de nóminas\n• Bancos\n• Transacciones\n• Préstamos\n• Fondo de ahorro\n\nEsta acción NO se puede deshacer.');
+    
+    if (!confirm1) return;
+    
+    // Second confirmation with type check
+    const confirm2 = prompt('⚠️ CONFIRMACIÓN FINAL\n\nEscribe "BORRAR" para confirmar la eliminación de todos tus datos:');
+    
+    if (confirm2 !== 'BORRAR') {
+        alert('Operación cancelada. Tus datos están a salvo.');
+        return;
+    }
+    
+    // Clear all localStorage keys
+    ALL_STORAGE_KEYS.forEach(key => {
+        localStorage.removeItem(key);
+    });
+    
+    alert('✅ Todos los datos han sido eliminados.\n\nLa aplicación se recargará ahora.');
+    
+    // Reload app
+    window.location.reload();
 }

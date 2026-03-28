@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v19 -->
+<!-- Updated: 2025-07-28-v20 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1193,7 +1193,91 @@
         </div>
     </div>
     
-    <!-- Savings Fund Modal -->
+    <!-- Tab: Ajustes -->
+    <div id="tab-ajustes" class="tab-content safe-top">
+        <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Ajustes</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Configuración y Copias de Seguridad</p>
+        
+        <!-- Backup Section -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--primary); display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" fill="var(--bg-dark)" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+                </div>
+                <div>
+                    <p style="font-weight: 600;">Copias de Seguridad</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">iCloud / Local</p>
+                </div>
+            </div>
+            
+            <button onclick="exportAllData()" style="width: 100%; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--primary); color: var(--bg-dark); border: none; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                Exportar Datos (JSON)
+            </button>
+            
+            <button onclick="document.getElementById('import-backup-file').click()" style="width: 100%; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: transparent; color: var(--primary); border: 1px solid var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                Importar Datos
+            </button>
+            <input type="file" id="import-backup-file" accept=".json" style="display: none;" onchange="importAllData(event)">
+            
+            <p style="color: var(--text-secondary); font-size: 11px; margin-top: 12px; text-align: center;">
+                Guarda tu copia de seguridad en iCloud Drive o Files
+            </p>
+        </div>
+        
+        <!-- App Info -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--purple); display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                </div>
+                <div>
+                    <p style="font-weight: 600;">Información</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Sobre la aplicación</p>
+                </div>
+            </div>
+            
+            <div style="background: var(--bg-input); border-radius: 10px; padding: 14px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary); font-size: 13px;">Versión</span>
+                    <span style="font-size: 13px; font-weight: 500;">v20</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary); font-size: 13px;">Almacenamiento</span>
+                    <span style="font-size: 13px; font-weight: 500;">Local (localStorage)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-secondary); font-size: 13px;">Formato Moneda</span>
+                    <span style="font-size: 13px; font-weight: 500;">EUR (es-ES)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Danger Zone -->
+        <div class="card" style="border: 1px solid var(--danger); background: rgba(255, 107, 107, 0.05);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--danger); display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                </div>
+                <div>
+                    <p style="font-weight: 600; color: var(--danger);">Zona Peligrosa</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Acciones irreversibles</p>
+                </div>
+            </div>
+            
+            <button onclick="deleteAllData()" style="width: 100%; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: transparent; color: var(--danger); border: 1px solid var(--danger); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                Borrar Todos los Datos
+            </button>
+            
+            <p style="color: var(--danger); font-size: 11px; margin-top: 12px; text-align: center;">
+                Esta acción eliminará permanentemente todos tus datos
+            </p>
+        </div>
+    </div>
+    
+    <!-- Savings Fund Modal (Legacy - kept for compatibility) -->
     <div id="savings-fund-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;">
         <div style="background: var(--bg-card); border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -1246,6 +1330,10 @@
         <button class="tab-btn" onclick="switchTab('prestamos')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             Préstamos
+        </button>
+        <button class="tab-btn" onclick="switchTab('ajustes')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+            Ajustes
         </button>
     </nav>
     
