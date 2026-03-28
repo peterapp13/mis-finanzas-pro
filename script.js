@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v13
+// Version: 2025-07-28-v14
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1022,42 +1022,73 @@ function saveSavingsHistory(history) {
     localStorage.setItem(SAVINGS_HISTORY_KEY, JSON.stringify(history));
 }
 
-function updateDashboard() {
-    // Populate period selector
-    const periodSelect = document.getElementById('dashboard-period');
+function initDashboardSelectors() {
+    const yearSelect = document.getElementById('dashboard-year');
     const data = getData();
-    const currentValue = periodSelect.value;
+    const currentYear = new Date().getFullYear();
     
-    periodSelect.innerHTML = '<option value="current">Nómina Actual (sin archivar)</option>';
+    // Get unique years from data
+    const years = [...new Set(data.map(r => r.year))];
+    if (!years.includes(currentYear)) years.push(currentYear);
+    years.sort((a, b) => b - a);
     
-    // Add archived months from historial
-    const sortedData = data.sort((a, b) => {
-        if (a.year !== b.year) return b.year - a.year;
-        return b.month - a.month;
+    yearSelect.innerHTML = '';
+    years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYear) option.selected = true;
+        yearSelect.appendChild(option);
     });
     
-    sortedData.forEach(record => {
+    updateDashboardMonths();
+}
+
+function updateDashboardMonths() {
+    const yearSelect = document.getElementById('dashboard-year');
+    const monthSelect = document.getElementById('dashboard-month');
+    const selectedYear = parseInt(yearSelect.value);
+    const data = getData();
+    
+    // Filter records for selected year
+    const yearRecords = data.filter(r => r.year === selectedYear);
+    
+    monthSelect.innerHTML = '<option value="current">Nómina Actual</option>';
+    
+    // Sort by month descending
+    yearRecords.sort((a, b) => b.month - a.month);
+    
+    yearRecords.forEach(record => {
         const option = document.createElement('option');
         option.value = record.id;
-        option.textContent = `${months[record.month - 1]} ${record.year}`;
-        periodSelect.appendChild(option);
+        option.textContent = months[record.month - 1];
+        monthSelect.appendChild(option);
     });
     
-    // Restore selection if exists
-    if (currentValue && periodSelect.querySelector(`option[value="${currentValue}"]`)) {
-        periodSelect.value = currentValue;
+    updateDashboard();
+}
+
+function updateDashboard() {
+    // Initialize selectors on first load
+    const yearSelect = document.getElementById('dashboard-year');
+    if (yearSelect && yearSelect.options.length === 0) {
+        initDashboardSelectors();
+        return;
     }
+    
+    const monthSelect = document.getElementById('dashboard-month');
+    const data = getData();
     
     // Get net income for selected period
     let netIncome = 0;
     let periodLabel = 'Nómina Actual';
     
-    if (periodSelect.value === 'current') {
+    if (monthSelect.value === 'current') {
         // Get from current payroll form
         netIncome = parseFloat(document.getElementById('total-neto')?.textContent) || 0;
         periodLabel = 'Nómina Actual';
     } else {
-        const record = data.find(r => r.id === periodSelect.value);
+        const record = data.find(r => r.id === monthSelect.value);
         if (record) {
             netIncome = record.totalNeto || 0;
             periodLabel = `${months[record.month - 1]} ${record.year}`;
@@ -1102,14 +1133,14 @@ function updateDashboard() {
     document.getElementById('rule-necesidades-actual').textContent = categoryTotals.necesidades.toFixed(2) + ' €';
     const necesidadesPercent = targets.necesidades > 0 ? (categoryTotals.necesidades / targets.necesidades) * 100 : 0;
     document.getElementById('rule-necesidades-bar').style.width = Math.min(150, necesidadesPercent) + '%';
-    updateRuleStatus('necesidades', categoryTotals.necesidades, targets.necesidades);
+    const necesidadesLibre = updateRuleStatus('necesidades', categoryTotals.necesidades, targets.necesidades);
     
     // Ocio
     document.getElementById('rule-ocio-target').textContent = targets.ocio.toFixed(2) + ' €';
     document.getElementById('rule-ocio-actual').textContent = categoryTotals.ocio.toFixed(2) + ' €';
     const ocioPercent = targets.ocio > 0 ? (categoryTotals.ocio / targets.ocio) * 100 : 0;
     document.getElementById('rule-ocio-bar').style.width = Math.min(150, ocioPercent) + '%';
-    updateRuleStatus('ocio', categoryTotals.ocio, targets.ocio);
+    const ocioLibre = updateRuleStatus('ocio', categoryTotals.ocio, targets.ocio);
     
     // Ahorro
     document.getElementById('rule-ahorro-target').textContent = targets.ahorro.toFixed(2) + ' €';
@@ -1117,6 +1148,10 @@ function updateDashboard() {
     const ahorroPercent = targets.ahorro > 0 ? (categoryTotals.ahorro / targets.ahorro) * 100 : 0;
     document.getElementById('rule-ahorro-bar').style.width = Math.min(150, ahorroPercent) + '%';
     updateRuleStatus('ahorro', categoryTotals.ahorro, targets.ahorro);
+    
+    // Calculate Dinero Disponible (Necesidades libre + Ocio libre, EXCLUDING Ahorro)
+    const dineroDisponible = Math.max(0, necesidadesLibre) + Math.max(0, ocioLibre);
+    document.getElementById('dashboard-available-money').textContent = dineroDisponible.toFixed(2) + ' €';
     
     // Update bank breakdown
     updateBankBreakdown();
@@ -1136,14 +1171,17 @@ function updateRuleStatus(category, actual, target) {
         statusEl.textContent = '--';
         statusEl.style.background = 'var(--bg-card)';
         statusEl.style.color = 'var(--text-secondary)';
+        return 0;
     } else if (diff >= 0) {
         statusEl.textContent = `✓ ${diff.toFixed(0)}€ libre`;
         statusEl.style.background = 'rgba(0, 212, 170, 0.2)';
         statusEl.style.color = 'var(--primary)';
+        return diff;
     } else {
         statusEl.textContent = `⚠ ${Math.abs(diff).toFixed(0)}€ exceso`;
         statusEl.style.background = 'rgba(255, 107, 107, 0.2)';
         statusEl.style.color = 'var(--danger)';
+        return diff;
     }
 }
 

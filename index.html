@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v13 -->
+<!-- Updated: 2025-07-28-v14 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -79,10 +79,19 @@
             background: var(--bg-card);
             border-top: 1px solid var(--bg-input);
             display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 10px 8px;
             padding-bottom: max(25px, env(safe-area-inset-bottom));
             z-index: 1000;
+            gap: 4px;
+        }
+        
+        .tab-bar::-webkit-scrollbar {
+            display: none;
         }
         
         .tab-btn {
@@ -93,11 +102,13 @@
             background: none;
             border: none;
             color: #666;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             cursor: pointer;
-            padding: 8px 16px;
+            padding: 8px 10px;
             transition: color 0.2s;
+            min-width: 52px;
+            flex-shrink: 0;
         }
         
         .tab-btn.active {
@@ -105,8 +116,9 @@
         }
         
         .tab-btn svg {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
         }
         
         .card {
@@ -637,17 +649,17 @@
         </div>
     </div>
     
-    <!-- Tab: Gastos -->
+    <!-- Tab: Transacciones -->
     <div id="tab-gastos" class="tab-content safe-top">
-        <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Gastos</h1>
-        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Definición de Gastos Recurrentes</p>
+        <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Transacciones</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Movimientos Recurrentes</p>
         
         <!-- Add Expense Form -->
         <div class="card">
-            <p style="font-weight: 600; margin-bottom: 16px;">Nuevo Gasto</p>
+            <p style="font-weight: 600; margin-bottom: 16px;">Nueva Transacción</p>
             
             <div style="margin-bottom: 12px;">
-                <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Nombre del Gasto</label>
+                <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Nombre</label>
                 <input type="text" id="expense-name" placeholder="Ej: Alquiler, Luz, Netflix..." 
                     style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
             </div>
@@ -695,17 +707,17 @@
             
             <button onclick="addExpense()" class="btn-primary">
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
-                Añadir Gasto
+                Añadir Transacción
             </button>
         </div>
         
         <!-- Expenses List -->
         <div class="card">
-            <p style="font-weight: 600; margin-bottom: 16px;">Mis Gastos Recurrentes</p>
+            <p style="font-weight: 600; margin-bottom: 16px;">Mis Transacciones</p>
             <div id="expenses-list">
                 <div id="expenses-empty" style="text-align: center; padding: 32px 0;">
                     <svg width="48" height="48" fill="#666" viewBox="0 0 20 20" style="margin: 0 auto 12px;"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
-                    <p style="color: var(--text-secondary);">No hay gastos definidos</p>
+                    <p style="color: var(--text-secondary);">No hay transacciones definidas</p>
                 </div>
             </div>
         </div>
@@ -991,13 +1003,24 @@
         <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Panel de Control</h1>
         <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Visualización Financiera</p>
         
-        <!-- Period Selector -->
+        <!-- Period Selector (Two-Level) -->
         <div class="card" style="margin-bottom: 16px;">
             <p style="font-weight: 600; margin-bottom: 12px;">Período de Análisis</p>
-            <select id="dashboard-period" onchange="updateDashboard()"
-                style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
-                <option value="current">Nómina Actual (sin archivar)</option>
-            </select>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 11px; display: block; margin-bottom: 6px;">Año</label>
+                    <select id="dashboard-year" onchange="updateDashboardMonths()"
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 12px 14px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
+                    </select>
+                </div>
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 11px; display: block; margin-bottom: 6px;">Mes</label>
+                    <select id="dashboard-month" onchange="updateDashboard()"
+                        style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 12px 14px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
+                        <option value="current">Nómina Actual</option>
+                    </select>
+                </div>
+            </div>
         </div>
         
         <!-- Selected Period Summary -->
@@ -1070,6 +1093,18 @@
                 <div style="height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden;">
                     <div id="rule-ahorro-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 0.3s;"></div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Dinero Disponible para Gastar -->
+        <div class="card" style="margin-bottom: 16px; border: 2px solid var(--purple); background: linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(0, 212, 170, 0.05));">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p style="font-weight: 600; font-size: 16px;">💸 Dinero Disponible</p>
+                    <p style="color: var(--text-secondary); font-size: 11px; margin-top: 2px;">Suma de € libre (Necesidades + Ocio)</p>
+                    <p style="color: var(--danger); font-size: 10px; margin-top: 4px; font-style: italic;">⚠️ No incluye el 20% de Ahorro</p>
+                </div>
+                <p id="dashboard-available-money" style="font-size: 32px; font-weight: bold; color: var(--purple);">0.00 €</p>
             </div>
         </div>
         
@@ -1178,8 +1213,8 @@
             Bancos
         </button>
         <button class="tab-btn" onclick="switchTab('gastos')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-            Gastos
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            Transacciones
         </button>
         <button class="tab-btn" onclick="switchTab('prestamos')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
