@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v26 -->
+<!-- Updated: 2025-07-28-v27 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -637,7 +637,7 @@
 </head>
 <body>
     <!-- Tab: Nómina -->
-    <div id="tab-nomina" class="tab-content active safe-top">
+    <div id="tab-nomina" class="tab-content safe-top">
         <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Nómina</h1>
         <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">Simulador de Nómina</p>
         
@@ -1175,7 +1175,7 @@
     </div>
     
     <!-- Tab: Dashboard (Panel de Control) -->
-    <div id="tab-dashboard" class="tab-content safe-top">
+    <div id="tab-dashboard" class="tab-content active safe-top">
         <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Panel de Control</h1>
         <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Visualización Financiera</p>
         
@@ -1481,21 +1481,17 @@
     
     <!-- Tab Bar -->
     <nav class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('nomina')">
+        <button class="tab-btn active" onclick="switchTab('dashboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+            Panel
+        </button>
+        <button class="tab-btn" onclick="switchTab('nomina')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
             Nómina
         </button>
         <button class="tab-btn" onclick="switchTab('historial')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Historial
-        </button>
-        <button class="tab-btn" onclick="switchTab('dashboard')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
-            Panel
-        </button>
-        <button class="tab-btn" onclick="switchTab('bancos')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
-            Bancos
         </button>
         <button class="tab-btn" onclick="switchTab('gastos')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
@@ -1504,6 +1500,10 @@
         <button class="tab-btn" onclick="switchTab('prestamos')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             Préstamos
+        </button>
+        <button class="tab-btn" onclick="switchTab('bancos')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
+            Bancos
         </button>
         <button class="tab-btn" onclick="switchTab('ajustes')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>

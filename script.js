@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v26
+// Version: 2025-07-28-v27
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
