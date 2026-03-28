@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v32
+// Version: 2025-07-28-v33
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -40,6 +40,19 @@ function formatCurrency(number) {
 function formatNumber(number) {
     if (number === null || number === undefined || isNaN(number)) return '0,00';
     return formatEuropeanNumber(number, 2);
+}
+
+// Parse European formatted number back to float
+// "1.234,56" -> 1234.56
+function parseEuropeanNumber(str) {
+    if (!str || typeof str !== 'string') return 0;
+    // Remove currency symbol and whitespace
+    str = str.replace(/[€\s]/g, '').trim();
+    // Remove thousands separators (dots)
+    str = str.replace(/\./g, '');
+    // Replace decimal comma with dot
+    str = str.replace(',', '.');
+    return parseFloat(str) || 0;
 }
 
 // Payroll concepts configuration
@@ -310,7 +323,8 @@ function calculateTotals() {
     let totalBruto = 0;
     
     concepts.forEach(concept => {
-        const abonar = parseFloat(document.getElementById(`${concept.id}_abonar`).textContent) || 0;
+        // Parse European formatted number (1.234,56 -> 1234.56)
+        const abonar = parseEuropeanNumber(document.getElementById(`${concept.id}_abonar`).textContent);
         totalBruto += abonar; // Total Bruto is sum of all "A Abonar"
     });
     
@@ -327,7 +341,8 @@ function calculateTotals() {
     // Calculate S.S. total (sum of all cuotas)
     let ssAmount = 0;
     ssConcepts.forEach(concept => {
-        const cuota = parseFloat(document.getElementById(`${concept.id}_cuota`).textContent) || 0;
+        // Parse European formatted number (1.234,56 -> 1234.56)
+        const cuota = parseEuropeanNumber(document.getElementById(`${concept.id}_cuota`).textContent);
         ssAmount += cuota;
     });
     
@@ -424,9 +439,9 @@ function savePayroll() {
             name: nameEl ? nameEl.value : concept.name,
             unidad: parseFloat(document.getElementById(`${concept.id}_unidad`).value) || 0,
             precio: parseFloat(document.getElementById(`${concept.id}_precio`).value) || 0,
-            abonar: parseFloat(document.getElementById(`${concept.id}_abonar`).textContent) || 0,
+            abonar: parseEuropeanNumber(document.getElementById(`${concept.id}_abonar`).textContent),
             deducir: parseFloat(document.getElementById(`${concept.id}_deducir`).value) || 0,
-            total: parseFloat(document.getElementById(`${concept.id}_total`).textContent) || 0
+            total: parseEuropeanNumber(document.getElementById(`${concept.id}_total`).textContent)
         };
     });
     
@@ -438,7 +453,7 @@ function savePayroll() {
             name: nameEl ? nameEl.value : concept.name,
             base: parseFloat(document.getElementById(`${concept.id}_base`).value) || 0,
             percent: parseFloat(document.getElementById(`${concept.id}_percent`).value) || 0,
-            cuota: parseFloat(document.getElementById(`${concept.id}_cuota`).textContent) || 0
+            cuota: parseEuropeanNumber(document.getElementById(`${concept.id}_cuota`).textContent)
         };
     });
     
