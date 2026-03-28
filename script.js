@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v17
+// Version: 2025-07-28-v18
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1718,21 +1718,29 @@ function updateHistorial() {
             
             row.innerHTML = `
                 <td style="padding: 10px 8px; font-weight: 500; color: var(--primary); position: sticky; left: 0; background: var(--bg-card); white-space: nowrap;">${monthsShort[month - 1]} ${selectedYear}</td>
-                <td style="padding: 10px 6px; text-align: right;">${salario.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${pagas.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${smg.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${prod.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${hfestUds.toFixed(0)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${hfestCost.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${hextraUds.toFixed(0)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${hextraCost.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${noct.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${atraso.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right; color: var(--purple);">${ss.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(salario)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(pagas)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(smg)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(prod)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${hfestUds}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(hfestCost)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${hextraUds}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(hextraCost)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(noct)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(atraso)}</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--purple);">${formatCurrency(ss)}</td>
                 <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${irpPercent.toFixed(2)}%</td>
-                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${irpCost.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right; font-weight: 600;">${bruto.toFixed(2)}</td>
-                <td style="padding: 10px 6px; text-align: right; font-weight: 600; color: var(--primary);">${neto.toFixed(2)}</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${formatCurrency(irpCost)}</td>
+                <td style="padding: 10px 6px; text-align: right; font-weight: 600;">${formatCurrency(bruto)}</td>
+                <td style="padding: 10px 6px; text-align: right; font-weight: 600; color: var(--primary);">${formatCurrency(neto)}</td>
+                <td style="padding: 10px 6px; text-align: center; white-space: nowrap;">
+                    <button onclick="editHistorialRecord('${record.id}')" style="background: none; border: none; color: var(--primary); cursor: pointer; padding: 4px;" title="Editar">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onclick="deleteHistorialRecord('${record.id}')" style="background: none; border: none; color: var(--danger); cursor: pointer; padding: 4px;" title="Eliminar">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </td>
             `;
         } else {
             // Empty row for months without data
@@ -1753,6 +1761,7 @@ function updateHistorial() {
                 <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
                 <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
                 <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
+                <td style="padding: 10px 6px;"></td>
             `;
         }
         
@@ -1760,21 +1769,77 @@ function updateHistorial() {
         tbody.appendChild(row);
     }
     
-    // Update footer totals
-    document.getElementById('hist-total-salario').textContent = totals.salario > 0 ? totals.salario.toFixed(2) : '-';
-    document.getElementById('hist-total-pagas').textContent = totals.pagas > 0 ? totals.pagas.toFixed(2) : '-';
-    document.getElementById('hist-total-smg').textContent = totals.smg > 0 ? totals.smg.toFixed(2) : '-';
-    document.getElementById('hist-total-prod').textContent = totals.prod > 0 ? totals.prod.toFixed(2) : '-';
-    document.getElementById('hist-total-hfest').textContent = totals.hfest > 0 ? totals.hfest.toFixed(0) : '-';
-    document.getElementById('hist-total-chfest').textContent = totals.chfest > 0 ? totals.chfest.toFixed(2) : '-';
-    document.getElementById('hist-total-hextra').textContent = totals.hextra > 0 ? totals.hextra.toFixed(0) : '-';
-    document.getElementById('hist-total-chextra').textContent = totals.chextra > 0 ? totals.chextra.toFixed(2) : '-';
-    document.getElementById('hist-total-noct').textContent = totals.noct > 0 ? totals.noct.toFixed(2) : '-';
-    document.getElementById('hist-total-atraso').textContent = totals.atraso > 0 ? totals.atraso.toFixed(2) : '-';
-    document.getElementById('hist-total-ss').textContent = totals.ss > 0 ? totals.ss.toFixed(2) : '-';
-    document.getElementById('hist-total-irp').textContent = totals.irp > 0 ? totals.irp.toFixed(2) : '-';
-    document.getElementById('hist-total-bruto').textContent = totals.bruto > 0 ? totals.bruto.toFixed(2) : '-';
-    document.getElementById('hist-total-neto').textContent = totals.neto > 0 ? totals.neto.toFixed(2) : '-';
+    // Update footer totals with formatCurrency
+    document.getElementById('hist-total-salario').textContent = totals.salario > 0 ? formatCurrency(totals.salario) : '-';
+    document.getElementById('hist-total-pagas').textContent = totals.pagas > 0 ? formatCurrency(totals.pagas) : '-';
+    document.getElementById('hist-total-smg').textContent = totals.smg > 0 ? formatCurrency(totals.smg) : '-';
+    document.getElementById('hist-total-prod').textContent = totals.prod > 0 ? formatCurrency(totals.prod) : '-';
+    document.getElementById('hist-total-hfest').textContent = totals.hfest > 0 ? totals.hfest : '-';
+    document.getElementById('hist-total-chfest').textContent = totals.chfest > 0 ? formatCurrency(totals.chfest) : '-';
+    document.getElementById('hist-total-hextra').textContent = totals.hextra > 0 ? totals.hextra : '-';
+    document.getElementById('hist-total-chextra').textContent = totals.chextra > 0 ? formatCurrency(totals.chextra) : '-';
+    document.getElementById('hist-total-noct').textContent = totals.noct > 0 ? formatCurrency(totals.noct) : '-';
+    document.getElementById('hist-total-atraso').textContent = totals.atraso > 0 ? formatCurrency(totals.atraso) : '-';
+    document.getElementById('hist-total-ss').textContent = totals.ss > 0 ? formatCurrency(totals.ss) : '-';
+    document.getElementById('hist-total-irp').textContent = totals.irp > 0 ? formatCurrency(totals.irp) : '-';
+    document.getElementById('hist-total-bruto').textContent = totals.bruto > 0 ? formatCurrency(totals.bruto) : '-';
+    document.getElementById('hist-total-neto').textContent = totals.neto > 0 ? formatCurrency(totals.neto) : '-';
+}
+
+// Delete record from Historial
+function deleteHistorialRecord(recordId) {
+    if (!confirm('¿Eliminar este registro de nómina?')) return;
+    
+    let data = getData();
+    data = data.filter(r => r.id !== recordId);
+    saveData(data);
+    updateHistorial();
+    updateStats();
+}
+
+// Edit record - populate Nómina tab with record data
+function editHistorialRecord(recordId) {
+    const data = getData();
+    const record = data.find(r => r.id === recordId);
+    
+    if (!record) return;
+    
+    // Set month/year picker
+    document.getElementById('month-picker').value = `${record.year}-${String(record.month).padStart(2, '0')}`;
+    updateDateDisplay();
+    
+    // Populate payroll rows
+    const concepts = record.concepts || {};
+    const payrollRows = document.querySelectorAll('#payroll-tbody tr');
+    
+    payrollRows.forEach(row => {
+        const conceptId = row.dataset.concept;
+        const conceptData = concepts[conceptId];
+        
+        if (conceptData) {
+            const inputs = row.querySelectorAll('input');
+            if (inputs[0]) inputs[0].value = conceptData.unidad || '';
+            if (inputs[1]) inputs[1].value = conceptData.precio || '';
+        }
+    });
+    
+    // Set IRPF percentage
+    document.getElementById('irpf_percent').value = record.irpfPercent || 6;
+    
+    // Delete the old record (will be re-saved when user clicks Validar)
+    let newData = data.filter(r => r.id !== recordId);
+    saveData(newData);
+    
+    // Recalculate
+    calculateTotals();
+    
+    // Switch to Nómina tab
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-nomina').classList.add('active');
+    document.querySelector('.tab-btn').classList.add('active');
+    
+    alert('Datos cargados en Nómina. Modifica y pulsa "Validar y Archivar" para guardar.');
 }
 
 // ==================== EXPORT/IMPORT ====================
