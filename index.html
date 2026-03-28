@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v41 -->
+<!-- Updated: 2025-07-28-v42 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -744,9 +744,53 @@
                 <button onclick="deletePinDigit()" class="keypad-btn" style="padding: 20px; border-radius: 16px; background: rgba(45, 45, 68, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); font-size: 18px; cursor: pointer;">⌫</button>
             </div>
             
-            <p style="color: rgba(255,255,255,0.5); font-size: 10px; margin-top: 32px; margin-bottom: 20px; letter-spacing: 0.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
+            <!-- Forgot PIN / Hard Reset Button -->
+            <button onclick="showHardResetModal()" style="margin-top: 24px; padding: 12px 20px; border-radius: 12px; background: rgba(255, 107, 107, 0.15); border: 1px solid rgba(255, 107, 107, 0.4); color: var(--danger); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; backdrop-filter: blur(10px);">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                Olvidé mi PIN (Hard Reset)
+            </button>
+            <p style="color: rgba(255, 107, 107, 0.7); font-size: 9px; margin-top: 8px; line-height: 1.4; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
+                (Atención: Esto borrará todos los datos locales. Necesitas tu último archivo de respaldo JSON para restaurar.)
+            </p>
+            
+            <p style="color: rgba(255,255,255,0.5); font-size: 10px; margin-top: 20px; margin-bottom: 20px; letter-spacing: 0.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
                 Crafted by Peter Fernandes | Precision Security
             </p>
+        </div>
+    </div>
+    
+    <!-- Hard Reset Confirmation Modal -->
+    <div id="hard-reset-modal" class="hidden" style="position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.9);">
+        <div style="max-width: 380px; width: 100%; background: var(--bg-card); border-radius: 20px; padding: 28px; text-align: center; border: 2px solid var(--danger);">
+            <!-- Warning Icon -->
+            <div style="width: 70px; height: 70px; border-radius: 50%; background: rgba(255, 107, 107, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; border: 2px solid var(--danger);">
+                <svg width="36" height="36" fill="var(--danger)" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            </div>
+            
+            <h2 style="color: var(--danger); font-size: 20px; font-weight: bold; margin-bottom: 12px;">¿Estás ABSOLUTAMENTE SEGURO?</h2>
+            
+            <p style="color: var(--text-primary); font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                Esta acción es <strong style="color: var(--danger);">IRREVERSIBLE</strong> y <strong style="color: var(--danger);">BORRARÁ TODOS LOS DATOS LOCALES</strong> de la aplicación en este dispositivo, incluyendo el PIN.
+            </p>
+            
+            <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 12px; padding: 14px; margin-bottom: 24px;">
+                <p style="color: #ffc107; font-size: 12px; line-height: 1.5;">
+                    <strong>Solo hazlo si tienes tu último archivo de respaldo JSON.</strong><br>
+                    Sin él, perderás todas tus nóminas, bancos, transacciones y préstamos.
+                </p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button onclick="executeHardReset()" style="width: 100%; padding: 16px; border-radius: 12px; background: var(--danger); border: none; color: white; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                    Sí, Borrar Todo
+                </button>
+                <button onclick="hideHardResetModal()" style="width: 100%; padding: 16px; border-radius: 12px; background: var(--primary); border: none; color: var(--bg-dark); font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                    No, Cancelar
+                </button>
+            </div>
         </div>
     </div>
     

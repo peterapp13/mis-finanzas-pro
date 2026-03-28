@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v41
+// Version: 2025-07-28-v42
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -175,6 +175,23 @@ function showChangePinModal() {
     // Save new PIN
     localStorage.setItem(PIN_KEY, newPin);
     alert('✅ PIN actualizado correctamente');
+}
+
+// ==================== HARD RESET / FORGOT PIN ====================
+function showHardResetModal() {
+    document.getElementById('hard-reset-modal').classList.remove('hidden');
+}
+
+function hideHardResetModal() {
+    document.getElementById('hard-reset-modal').classList.add('hidden');
+}
+
+function executeHardReset() {
+    // Clear ALL localStorage data
+    localStorage.clear();
+    
+    // Reload the page - app will detect no PIN and show setup screen
+    location.reload();
 }
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
