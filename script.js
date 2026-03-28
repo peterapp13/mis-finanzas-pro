@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v15
+// Version: 2025-07-28-v16
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1250,11 +1250,11 @@ function updateBankBreakdown() {
 }
 
 // Spain IRPF Tax Calculator (2026 General State Tranches)
-// Uses cumulative progressive tax brackets
-function calculateIRPFEstimado(annualGross) {
-    if (annualGross <= 0) return 0;
+// Applies progressive tax brackets to the Base Liquidable (taxable base)
+function calculateIRPFLegal(baseLiquidable) {
+    if (baseLiquidable <= 0) return 0;
     
-    // Spain 2026 IRPF General State Tranches (cumulative)
+    // Spain 2026 IRPF General State Tranches (cumulative progressive)
     const tranches = [
         { limit: 12450, rate: 0.19 },
         { limit: 20200, rate: 0.24 },
@@ -1266,18 +1266,18 @@ function calculateIRPFEstimado(annualGross) {
     let previousLimit = 0;
     
     for (const tranche of tranches) {
-        if (annualGross <= previousLimit) break;
+        if (baseLiquidable <= previousLimit) break;
         
-        const taxableInTranche = Math.min(annualGross, tranche.limit) - previousLimit;
+        const taxableInTranche = Math.min(baseLiquidable, tranche.limit) - previousLimit;
         if (taxableInTranche > 0) {
             tax += taxableInTranche * tranche.rate;
         }
         previousLimit = tranche.limit;
     }
     
-    // For income above the last tranche (€60,000+), apply 45% marginal rate
-    if (annualGross > 60000) {
-        tax += (annualGross - 60000) * 0.45;
+    // For income above €60,000, apply 45% marginal rate
+    if (baseLiquidable > 60000) {
+        tax += (baseLiquidable - 60000) * 0.45;
     }
     
     return tax;
@@ -1297,27 +1297,34 @@ function updateAnnualSummary() {
     const monthsCount = yearData.length;
     
     let totalBruto = 0;
-    let totalIrpf = 0;
+    let totalIrpfRetenido = 0;
     let totalSS = 0;
     
     yearData.forEach(r => {
         totalBruto += r.totalBruto || 0;
-        totalIrpf += r.irpfAmount || 0;
+        totalIrpfRetenido += r.irpfAmount || 0;
         totalSS += r.ssAmount || 0;
     });
     
-    // Calculate average monthly bruto and project to full year
-    let projectedAnnualBruto = 0;
+    // Calculate projections (average * 12) for annual values
+    let proyeccionBruto = 0;
+    let proyeccionSS = 0;
+    let proyeccionRetenido = 0;
     let isEstimated = true;
     
     if (monthsCount > 0) {
-        const averageMonthlyBruto = totalBruto / monthsCount;
-        projectedAnnualBruto = averageMonthlyBruto * 12;
+        const avgBruto = totalBruto / monthsCount;
+        const avgSS = totalSS / monthsCount;
+        const avgRetenido = totalIrpfRetenido / monthsCount;
+        
+        proyeccionBruto = avgBruto * 12;
+        proyeccionSS = avgSS * 12;
+        proyeccionRetenido = avgRetenido * 12;
         isEstimated = monthsCount < 12;
     }
     
     // Update Bruto Anual
-    document.getElementById('dashboard-annual-bruto').textContent = projectedAnnualBruto.toFixed(2) + ' €';
+    document.getElementById('dashboard-annual-bruto').textContent = proyeccionBruto.toFixed(2) + ' €';
     
     // Update estimated label
     const estimatedLabel = document.getElementById('dashboard-annual-estimated-label');
@@ -1333,15 +1340,46 @@ function updateAnnualSummary() {
         }
     }
     
-    // Update IRPF Retenido (actual accumulated)
-    document.getElementById('dashboard-annual-irpf').textContent = totalIrpf.toFixed(2) + ' €';
+    // Calculate Base Liquidable (taxable base)
+    // Bruto - 7550 (minimum personal + labor deductions) - S.S. contributions
+    const DEDUCCION_MINIMA = 7550;
+    let baseLiquidable = proyeccionBruto - DEDUCCION_MINIMA - proyeccionSS;
+    if (baseLiquidable < 0) baseLiquidable = 0;
     
-    // Calculate and display IRPF Legal Estimado
-    const irpfLegal = calculateIRPFEstimado(projectedAnnualBruto);
-    document.getElementById('dashboard-annual-irpf-legal').textContent = irpfLegal.toFixed(2) + ' €';
+    // Calculate Legal IRPF from Base Liquidable
+    const irpfLegalTotal = calculateIRPFLegal(baseLiquidable);
     
-    // Update S.S. Acumulada
-    document.getElementById('dashboard-annual-ss').textContent = totalSS.toFixed(2) + ' €';
+    // Calculate Tax Return Result
+    // Positive = you owe money (A Pagar)
+    // Negative = refund (A Devolver)
+    const resultadoRenta = irpfLegalTotal - proyeccionRetenido;
+    
+    // Update IRPF Retenido (projected annual)
+    document.getElementById('dashboard-annual-irpf').textContent = proyeccionRetenido.toFixed(2) + ' €';
+    
+    // Update IRPF Legal Total
+    document.getElementById('dashboard-annual-irpf-legal').textContent = irpfLegalTotal.toFixed(2) + ' €';
+    
+    // Update Previsión Renta
+    const rentaElement = document.getElementById('dashboard-renta-result');
+    if (rentaElement) {
+        if (monthsCount === 0) {
+            rentaElement.textContent = '--';
+            rentaElement.style.color = 'var(--text-secondary)';
+        } else if (resultadoRenta > 0.01) {
+            rentaElement.textContent = `A Pagar: ${resultadoRenta.toFixed(2)} €`;
+            rentaElement.style.color = 'var(--danger)';
+        } else if (resultadoRenta < -0.01) {
+            rentaElement.textContent = `A Devolver: ${Math.abs(resultadoRenta).toFixed(2)} €`;
+            rentaElement.style.color = 'var(--primary)';
+        } else {
+            rentaElement.textContent = 'Equilibrado';
+            rentaElement.style.color = 'var(--text-secondary)';
+        }
+    }
+    
+    // Update S.S. Acumulada (projected annual)
+    document.getElementById('dashboard-annual-ss').textContent = proyeccionSS.toFixed(2) + ' €';
     
     // Update months info
     const monthsInfo = document.getElementById('dashboard-annual-months-info');
