@@ -701,7 +701,7 @@ function updateExpensesList() {
         row.innerHTML = `
             <div style="display: flex; align-items: center; margin-bottom: 8px;">
                 <span style="flex: 1; font-weight: 600;">${expense.name}</span>
-                <span style="font-size: 18px; font-weight: bold; color: var(--primary);">${expense.amount.toFixed(2)} €</span>
+                <span style="font-size: 18px; font-weight: bold; color: var(--primary);">${formatCurrency(expense.amount)}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 12px; color: var(--text-secondary); background: var(--bg-input); padding: 4px 8px; border-radius: 6px;">
@@ -1733,12 +1733,9 @@ function updateHistorial() {
                 <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${formatCurrency(irpCost)}</td>
                 <td style="padding: 10px 6px; text-align: right; font-weight: 600;">${formatCurrency(bruto)}</td>
                 <td style="padding: 10px 6px; text-align: right; font-weight: 600; color: var(--primary);">${formatCurrency(neto)}</td>
-                <td style="padding: 10px 6px; text-align: center; white-space: nowrap;">
-                    <button onclick="editHistorialRecord('${record.id}')" style="background: none; border: none; color: var(--primary); cursor: pointer; padding: 4px;" title="Editar">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
+                <td style="padding: 10px 6px; text-align: center;">
                     <button onclick="deleteHistorialRecord('${record.id}')" style="background: none; border: none; color: var(--danger); cursor: pointer; padding: 4px;" title="Eliminar">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </td>
             `;
@@ -1795,51 +1792,6 @@ function deleteHistorialRecord(recordId) {
     saveData(data);
     updateHistorial();
     updateStats();
-}
-
-// Edit record - populate Nómina tab with record data
-function editHistorialRecord(recordId) {
-    const data = getData();
-    const record = data.find(r => r.id === recordId);
-    
-    if (!record) return;
-    
-    // Set month/year picker
-    document.getElementById('month-picker').value = `${record.year}-${String(record.month).padStart(2, '0')}`;
-    updateDateDisplay();
-    
-    // Populate payroll rows
-    const concepts = record.concepts || {};
-    const payrollRows = document.querySelectorAll('#payroll-tbody tr');
-    
-    payrollRows.forEach(row => {
-        const conceptId = row.dataset.concept;
-        const conceptData = concepts[conceptId];
-        
-        if (conceptData) {
-            const inputs = row.querySelectorAll('input');
-            if (inputs[0]) inputs[0].value = conceptData.unidad || '';
-            if (inputs[1]) inputs[1].value = conceptData.precio || '';
-        }
-    });
-    
-    // Set IRPF percentage
-    document.getElementById('irpf_percent').value = record.irpfPercent || 6;
-    
-    // Delete the old record (will be re-saved when user clicks Validar)
-    let newData = data.filter(r => r.id !== recordId);
-    saveData(newData);
-    
-    // Recalculate
-    calculateTotals();
-    
-    // Switch to Nómina tab
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-nomina').classList.add('active');
-    document.querySelector('.tab-btn').classList.add('active');
-    
-    alert('Datos cargados en Nómina. Modifica y pulsa "Validar y Archivar" para guardar.');
 }
 
 // ==================== EXPORT/IMPORT ====================
