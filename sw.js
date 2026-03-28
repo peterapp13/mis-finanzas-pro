@@ -1,8 +1,9 @@
-const CACHE_NAME = 'mis-finanzas-pro-v38';
+const CACHE_NAME = 'mis-finanzas-pro-v39';
 const urlsToCache = [
   './',
   './index.html',
   './script.js',
+  './welcome-image.png',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
