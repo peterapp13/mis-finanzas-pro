@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v14 -->
+<!-- Updated: 2025-07-28-v15 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1023,6 +1023,27 @@
             </div>
         </div>
         
+        <!-- Fondo de Ahorro Real (Compact Card) -->
+        <div class="card" style="margin-bottom: 16px; border: 1px solid var(--primary); background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), transparent);">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="24" height="24" fill="var(--bg-dark)" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/></svg>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <p style="color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Fondo de Ahorro Real</p>
+                    <p id="savings-fund-balance" style="font-size: 26px; font-weight: bold; color: var(--primary); margin-top: 2px;">0.00 €</p>
+                </div>
+                <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                    <button onclick="showSavingsFundModal('deposit')" style="width: 40px; height: 40px; border-radius: 10px; background: var(--primary); color: var(--bg-dark); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                    </button>
+                    <button onclick="showSavingsFundModal('withdraw')" style="width: 40px; height: 40px; border-radius: 10px; background: transparent; color: var(--danger); border: 1px solid var(--danger); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Selected Period Summary -->
         <div class="card" style="border: 1px solid var(--primary); background: rgba(0, 212, 170, 0.05); margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1116,53 +1137,45 @@
             </div>
         </div>
         
-        <!-- Annual Summary 2026 -->
-        <div class="card" style="margin-bottom: 16px; border: 1px solid var(--purple);">
+        <!-- Annual Summary (Intelligent Projections) -->
+        <div class="card" style="border: 1px solid var(--purple);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <p style="font-weight: 600;">📅 Resumen Anual</p>
                 <span id="dashboard-annual-year" style="color: var(--purple); font-weight: 600;">2026</span>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-                <div style="text-align: center; padding: 12px; background: var(--bg-input); border-radius: 10px;">
-                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Bruto Acum.</p>
-                    <p id="dashboard-annual-bruto" style="font-size: 16px; font-weight: bold; margin-top: 4px;">0.00 €</p>
+            
+            <!-- Bruto Anual Estimado -->
+            <div style="padding: 14px; background: var(--bg-input); border-radius: 10px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="font-size: 12px; color: var(--text-secondary);">Bruto Anual</p>
+                        <p id="dashboard-annual-estimated-label" style="font-size: 10px; color: var(--purple); font-style: italic;">(Estimado)</p>
+                    </div>
+                    <p id="dashboard-annual-bruto" style="font-size: 22px; font-weight: bold;">0.00 €</p>
                 </div>
-                <div style="text-align: center; padding: 12px; background: var(--bg-input); border-radius: 10px;">
-                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">IRPF Acum.</p>
+            </div>
+            
+            <!-- IRPF Comparativa -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div style="padding: 12px; background: var(--bg-input); border-radius: 10px; text-align: center;">
+                    <p style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">IRPF Retenido</p>
                     <p id="dashboard-annual-irpf" style="font-size: 16px; font-weight: bold; color: var(--danger); margin-top: 4px;">0.00 €</p>
                 </div>
-                <div style="text-align: center; padding: 12px; background: var(--bg-input); border-radius: 10px;">
-                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">S.S. Acum.</p>
-                    <p id="dashboard-annual-ss" style="font-size: 16px; font-weight: bold; color: var(--purple); margin-top: 4px;">0.00 €</p>
+                <div style="padding: 12px; background: rgba(108, 92, 231, 0.1); border-radius: 10px; text-align: center; border: 1px solid var(--purple);">
+                    <p style="font-size: 10px; color: var(--purple); text-transform: uppercase;">IRPF Legal</p>
+                    <p id="dashboard-annual-irpf-legal" style="font-size: 16px; font-weight: bold; color: var(--purple); margin-top: 4px;">0.00 €</p>
+                    <p style="font-size: 9px; color: var(--text-secondary); font-style: italic;">(Estimado)</p>
                 </div>
             </div>
-        </div>
-        
-        <!-- Real Savings Fund -->
-        <div class="card" style="border: 2px solid var(--primary); background: linear-gradient(135deg, rgba(0, 212, 170, 0.1), transparent);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-                <div>
-                    <p style="font-weight: 600; font-size: 18px;">💎 Fondo de Ahorro Real</p>
-                    <p style="color: var(--text-secondary); font-size: 12px; margin-top: 2px;">Dinero real ahorrado</p>
-                </div>
-                <p id="savings-fund-balance" style="font-size: 32px; font-weight: bold; color: var(--primary);">0.00 €</p>
+            
+            <!-- S.S. Acumulada -->
+            <div style="padding: 12px; background: var(--bg-input); border-radius: 10px; text-align: center;">
+                <p style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">S.S. Acumulada</p>
+                <p id="dashboard-annual-ss" style="font-size: 16px; font-weight: bold; color: var(--purple); margin-top: 4px;">0.00 €</p>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                <button onclick="showSavingsFundModal('deposit')" style="background: var(--primary); color: var(--bg-dark); border: none; border-radius: 10px; padding: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
-                    Ingresar
-                </button>
-                <button onclick="showSavingsFundModal('withdraw')" style="background: transparent; color: var(--danger); border: 1px solid var(--danger); border-radius: 10px; padding: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-                    Retirar
-                </button>
-            </div>
-            
-            <!-- Recent Transactions -->
-            <div id="savings-fund-history" style="max-height: 200px; overflow-y: auto;">
-                <p style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 12px;">Sin movimientos</p>
-            </div>
+            <!-- Months indicator -->
+            <p id="dashboard-annual-months-info" style="font-size: 10px; color: var(--text-secondary); text-align: center; margin-top: 12px; font-style: italic;">Basado en 0 meses archivados</p>
         </div>
     </div>
     

@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v14
+// Version: 2025-07-28-v15
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1249,12 +1249,52 @@ function updateBankBreakdown() {
     });
 }
 
-function updateAnnualSummary() {
-    const currentYear = new Date().getFullYear();
-    const data = getData();
-    const yearData = data.filter(r => r.year === currentYear);
+// Spain IRPF Tax Calculator (2026 General State Tranches)
+// Uses cumulative progressive tax brackets
+function calculateIRPFEstimado(annualGross) {
+    if (annualGross <= 0) return 0;
     
-    document.getElementById('dashboard-annual-year').textContent = currentYear;
+    // Spain 2026 IRPF General State Tranches (cumulative)
+    const tranches = [
+        { limit: 12450, rate: 0.19 },
+        { limit: 20200, rate: 0.24 },
+        { limit: 35200, rate: 0.30 },
+        { limit: 60000, rate: 0.37 }
+    ];
+    
+    let tax = 0;
+    let previousLimit = 0;
+    
+    for (const tranche of tranches) {
+        if (annualGross <= previousLimit) break;
+        
+        const taxableInTranche = Math.min(annualGross, tranche.limit) - previousLimit;
+        if (taxableInTranche > 0) {
+            tax += taxableInTranche * tranche.rate;
+        }
+        previousLimit = tranche.limit;
+    }
+    
+    // For income above the last tranche (€60,000+), apply 45% marginal rate
+    if (annualGross > 60000) {
+        tax += (annualGross - 60000) * 0.45;
+    }
+    
+    return tax;
+}
+
+function updateAnnualSummary() {
+    // Get the selected year from the dashboard year selector
+    const yearSelect = document.getElementById('dashboard-year');
+    const selectedYear = yearSelect ? parseInt(yearSelect.value) : new Date().getFullYear();
+    
+    const data = getData();
+    // Filter strictly by the selected year only
+    const yearData = data.filter(r => r.year === selectedYear);
+    
+    document.getElementById('dashboard-annual-year').textContent = selectedYear;
+    
+    const monthsCount = yearData.length;
     
     let totalBruto = 0;
     let totalIrpf = 0;
@@ -1266,9 +1306,54 @@ function updateAnnualSummary() {
         totalSS += r.ssAmount || 0;
     });
     
-    document.getElementById('dashboard-annual-bruto').textContent = totalBruto.toFixed(2) + ' €';
+    // Calculate average monthly bruto and project to full year
+    let projectedAnnualBruto = 0;
+    let isEstimated = true;
+    
+    if (monthsCount > 0) {
+        const averageMonthlyBruto = totalBruto / monthsCount;
+        projectedAnnualBruto = averageMonthlyBruto * 12;
+        isEstimated = monthsCount < 12;
+    }
+    
+    // Update Bruto Anual
+    document.getElementById('dashboard-annual-bruto').textContent = projectedAnnualBruto.toFixed(2) + ' €';
+    
+    // Update estimated label
+    const estimatedLabel = document.getElementById('dashboard-annual-estimated-label');
+    if (estimatedLabel) {
+        if (isEstimated && monthsCount > 0) {
+            estimatedLabel.textContent = '(Estimado)';
+            estimatedLabel.style.display = 'block';
+        } else if (monthsCount === 12) {
+            estimatedLabel.textContent = '(Completo)';
+            estimatedLabel.style.display = 'block';
+        } else {
+            estimatedLabel.style.display = 'none';
+        }
+    }
+    
+    // Update IRPF Retenido (actual accumulated)
     document.getElementById('dashboard-annual-irpf').textContent = totalIrpf.toFixed(2) + ' €';
+    
+    // Calculate and display IRPF Legal Estimado
+    const irpfLegal = calculateIRPFEstimado(projectedAnnualBruto);
+    document.getElementById('dashboard-annual-irpf-legal').textContent = irpfLegal.toFixed(2) + ' €';
+    
+    // Update S.S. Acumulada
     document.getElementById('dashboard-annual-ss').textContent = totalSS.toFixed(2) + ' €';
+    
+    // Update months info
+    const monthsInfo = document.getElementById('dashboard-annual-months-info');
+    if (monthsInfo) {
+        if (monthsCount === 0) {
+            monthsInfo.textContent = 'Sin datos archivados para ' + selectedYear;
+        } else if (monthsCount === 1) {
+            monthsInfo.textContent = 'Basado en 1 mes archivado';
+        } else {
+            monthsInfo.textContent = `Basado en ${monthsCount} meses archivados`;
+        }
+    }
 }
 
 function updateSavingsFundDisplay() {
