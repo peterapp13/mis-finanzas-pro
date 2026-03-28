@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v25 -->
+<!-- Updated: 2025-07-28-v26 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -475,139 +475,162 @@
                 margin: 0.5cm;
             }
             
-            /* 2. Reset Global Styles for Print - Force white background, black text */
-            *, *::before, *::after {
-                background: white !important;
-                color: black !important;
-                box-shadow: none !important;
-                text-shadow: none !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            
+            /* 2. Reset body and html */
             html, body {
                 background: white !important;
                 color: black !important;
                 height: auto !important;
+                width: 100% !important;
                 overflow: visible !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 font-size: 9pt !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             
             /* 3. Hide all UI Clutter */
             .tab-bar,
             .no-print,
             .delete-btn,
-            button,
-            select,
-            .card,
             .safe-top,
             #tab-nomina,
             #tab-bancos,
             #tab-gastos,
             #tab-prestamos,
+            #tab-stats,
             #tab-dashboard,
             #tab-ajustes,
             #savings-fund-modal {
                 display: none !important;
+                visibility: hidden !important;
             }
             
-            /* 4. Show only historial tab */
+            /* 4. FORCE show historial tab */
             #tab-historial {
                 display: block !important;
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
+                visibility: visible !important;
+                position: static !important;
                 width: 100% !important;
-                padding: 0 !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 10px !important;
                 margin: 0 !important;
                 background: white !important;
+                color: black !important;
             }
             
-            /* 5. Show print header */
+            /* 5. Override tab-content display:none for historial */
+            #tab-historial.tab-content {
+                display: block !important;
+            }
+            
+            /* 6. Show print header */
             .print-header {
                 display: block !important;
+                visibility: visible !important;
                 background: white !important;
-                padding: 10px 0 !important;
+                padding: 15px 0 !important;
                 margin-bottom: 15px !important;
+                text-align: center !important;
             }
             
             .print-header h1 {
-                font-size: 16pt !important;
+                font-size: 18pt !important;
                 font-weight: bold !important;
                 color: black !important;
                 margin: 0 0 5px 0 !important;
             }
             
             .print-header p {
-                font-size: 11pt !important;
+                font-size: 12pt !important;
                 color: #333 !important;
                 margin: 0 !important;
             }
             
-            /* 6. Table container - remove scroll wrapper */
-            .table-scroll {
-                overflow: visible !important;
-                max-height: none !important;
+            /* 7. Hide historial UI elements */
+            #tab-historial > h1,
+            #tab-historial > p,
+            #tab-historial button,
+            #tab-historial select,
+            #tab-historial .no-print,
+            .legend-card,
+            .card {
+                display: none !important;
             }
             
-            /* 7. Table Styling for Paper */
+            /* 8. Table container - force visible */
+            #tab-historial .card,
+            .table-scroll {
+                display: block !important;
+                overflow: visible !important;
+                max-height: none !important;
+                background: white !important;
+            }
+            
+            /* 9. Table Styling for Paper */
             #historial-table {
+                display: table !important;
+                visibility: visible !important;
                 width: 100% !important;
                 min-width: unset !important;
                 border-collapse: collapse !important;
                 background: white !important;
                 color: black !important;
-                font-size: 8pt !important;
+                font-size: 7pt !important;
                 table-layout: auto !important;
             }
             
-            #historial-table th,
-            #historial-table td {
-                border: 1px solid #333 !important;
-                color: black !important;
+            #historial-table thead {
+                display: table-header-group !important;
+            }
+            
+            #historial-table tbody {
+                display: table-row-group !important;
+            }
+            
+            #historial-table tr {
+                display: table-row !important;
                 background: white !important;
-                padding: 4px 6px !important;
-                font-size: 8pt !important;
-                text-align: center !important;
             }
             
             #historial-table th {
-                background: #f0f0f0 !important;
-                font-weight: bold !important;
+                display: table-cell !important;
+                border: 1px solid #333 !important;
                 color: black !important;
+                background: #d0d0d0 !important;
+                padding: 5px 3px !important;
+                font-size: 7pt !important;
+                font-weight: bold !important;
+                text-align: center !important;
             }
             
-            #historial-table tr:nth-child(even) td {
-                background: #f9f9f9 !important;
+            #historial-table td {
+                display: table-cell !important;
+                border: 1px solid #666 !important;
+                color: black !important;
+                background: white !important;
+                padding: 4px 3px !important;
+                font-size: 7pt !important;
+                text-align: center !important;
             }
             
-            /* 8. TOTALES row styling */
-            #historial-table tr:last-child td {
+            /* 10. Alternating row colors */
+            #historial-table tbody tr:nth-child(even) td {
+                background: #f5f5f5 !important;
+            }
+            
+            /* 11. TOTALES row styling */
+            #historial-table tbody tr:last-child td {
                 background: #e0e0e0 !important;
                 font-weight: bold !important;
                 border-top: 2px solid black !important;
             }
             
-            /* 9. Hide action columns (last column with delete buttons) */
+            /* 12. Hide delete column (last column) */
             #historial-table th:last-child,
             #historial-table td:last-child {
                 display: none !important;
-            }
-            
-            /* 10. Hide UI elements inside historial */
-            #tab-historial h1,
-            #tab-historial > p,
-            #tab-historial .card,
-            .legend-card {
-                display: none !important;
-            }
-            
-            /* 11. Links */
-            a {
-                color: black !important;
-                text-decoration: none !important;
             }
         }
     </style>

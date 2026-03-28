@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v25
+// Version: 2025-07-28-v26
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1825,8 +1825,17 @@ function printHistorialReport() {
         printTitle.textContent = `Año Fiscal: ${selectedYear}`;
     }
     
-    // Trigger print
-    window.print();
+    // Ensure historial tab is active and visible before printing
+    const historialTab = document.getElementById('tab-historial');
+    if (historialTab) {
+        // Add active class temporarily for print
+        historialTab.classList.add('active');
+    }
+    
+    // Small delay to ensure DOM is ready, then print
+    setTimeout(() => {
+        window.print();
+    }, 100);
 }
 
 function updateHistorial() {
