@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v12 -->
+<!-- Updated: 2025-07-28-v13 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -668,7 +668,7 @@
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <div id="expense-date-container">
                     <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Día del Mes</label>
                     <input type="number" id="expense-day" placeholder="1-31" min="1" max="31"
@@ -681,6 +681,16 @@
                         <option value="">-- Seleccionar --</option>
                     </select>
                 </div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Categoría (Regla 50/30/20)</label>
+                <select id="expense-category"
+                    style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
+                    <option value="necesidades">Gastos Básicos (50%)</option>
+                    <option value="ocio">Ocio (30%)</option>
+                    <option value="ahorro">Ahorros (20%)</option>
+                </select>
             </div>
             
             <button onclick="addExpense()" class="btn-primary">
@@ -787,6 +797,16 @@
                     <input type="number" inputmode="decimal" id="loan-payment" placeholder="0.00" min="0" step="0.01" oninput="calculateLoanTotal()"
                         style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
                 </div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Categoría (Regla 50/30/20)</label>
+                <select id="loan-category"
+                    style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
+                    <option value="necesidades">Gastos Básicos (50%)</option>
+                    <option value="ocio">Ocio (30%)</option>
+                    <option value="ahorro">Ahorros (20%)</option>
+                </select>
             </div>
             
             <!-- Calculated Total -->
@@ -966,6 +986,179 @@
         </div>
     </div>
     
+    <!-- Tab: Dashboard (Panel de Control) -->
+    <div id="tab-dashboard" class="tab-content safe-top">
+        <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Panel de Control</h1>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Visualización Financiera</p>
+        
+        <!-- Period Selector -->
+        <div class="card" style="margin-bottom: 16px;">
+            <p style="font-weight: 600; margin-bottom: 12px;">Período de Análisis</p>
+            <select id="dashboard-period" onchange="updateDashboard()"
+                style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
+                <option value="current">Nómina Actual (sin archivar)</option>
+            </select>
+        </div>
+        
+        <!-- Selected Period Summary -->
+        <div class="card" style="border: 1px solid var(--primary); background: rgba(0, 212, 170, 0.05); margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Líquido del Período</p>
+                    <p id="dashboard-period-label" style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;">Nómina Actual</p>
+                </div>
+                <p id="dashboard-net-income" style="font-size: 28px; font-weight: bold; color: var(--primary);">0.00 €</p>
+            </div>
+        </div>
+        
+        <!-- 50/30/20 Rule Analysis -->
+        <div class="card" style="margin-bottom: 16px;">
+            <p style="font-weight: 600; margin-bottom: 16px;">📊 Regla 50/30/20</p>
+            
+            <!-- Necesidades 50% -->
+            <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: var(--danger);">🏠 Necesidades (50%)</span>
+                    <span id="rule-necesidades-status" style="font-size: 12px; padding: 4px 8px; border-radius: 6px; background: var(--bg-card);">--</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                    <span style="color: var(--text-secondary);">Objetivo:</span>
+                    <span id="rule-necesidades-target">0.00 €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Actual:</span>
+                    <span id="rule-necesidades-actual" style="font-weight: 600;">0.00 €</span>
+                </div>
+                <div style="height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden;">
+                    <div id="rule-necesidades-bar" style="height: 100%; background: var(--danger); width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            
+            <!-- Ocio 30% -->
+            <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: var(--purple);">🎮 Ocio (30%)</span>
+                    <span id="rule-ocio-status" style="font-size: 12px; padding: 4px 8px; border-radius: 6px; background: var(--bg-card);">--</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                    <span style="color: var(--text-secondary);">Objetivo:</span>
+                    <span id="rule-ocio-target">0.00 €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Actual:</span>
+                    <span id="rule-ocio-actual" style="font-weight: 600;">0.00 €</span>
+                </div>
+                <div style="height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden;">
+                    <div id="rule-ocio-bar" style="height: 100%; background: var(--purple); width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            
+            <!-- Ahorro 20% -->
+            <div style="padding: 12px; background: var(--bg-input); border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: var(--primary);">💰 Ahorro (20%)</span>
+                    <span id="rule-ahorro-status" style="font-size: 12px; padding: 4px 8px; border-radius: 6px; background: var(--bg-card);">--</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+                    <span style="color: var(--text-secondary);">Objetivo:</span>
+                    <span id="rule-ahorro-target">0.00 €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary);">Actual:</span>
+                    <span id="rule-ahorro-actual" style="font-weight: 600;">0.00 €</span>
+                </div>
+                <div style="height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden;">
+                    <div id="rule-ahorro-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bank Breakdown -->
+        <div class="card" style="margin-bottom: 16px;">
+            <p style="font-weight: 600; margin-bottom: 16px;">🏦 Desglose por Banco</p>
+            <div id="dashboard-banks-breakdown">
+                <p style="color: var(--text-secondary); text-align: center; padding: 20px;">No hay bancos configurados</p>
+            </div>
+        </div>
+        
+        <!-- Annual Summary 2026 -->
+        <div class="card" style="margin-bottom: 16px; border: 1px solid var(--purple);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <p style="font-weight: 600;">📅 Resumen Anual</p>
+                <span id="dashboard-annual-year" style="color: var(--purple); font-weight: 600;">2026</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                <div style="text-align: center; padding: 12px; background: var(--bg-input); border-radius: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Bruto Acum.</p>
+                    <p id="dashboard-annual-bruto" style="font-size: 16px; font-weight: bold; margin-top: 4px;">0.00 €</p>
+                </div>
+                <div style="text-align: center; padding: 12px; background: var(--bg-input); border-radius: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">IRPF Acum.</p>
+                    <p id="dashboard-annual-irpf" style="font-size: 16px; font-weight: bold; color: var(--danger); margin-top: 4px;">0.00 €</p>
+                </div>
+                <div style="text-align: center; padding: 12px; background: var(--bg-input); border-radius: 10px;">
+                    <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">S.S. Acum.</p>
+                    <p id="dashboard-annual-ss" style="font-size: 16px; font-weight: bold; color: var(--purple); margin-top: 4px;">0.00 €</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Real Savings Fund -->
+        <div class="card" style="border: 2px solid var(--primary); background: linear-gradient(135deg, rgba(0, 212, 170, 0.1), transparent);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                <div>
+                    <p style="font-weight: 600; font-size: 18px;">💎 Fondo de Ahorro Real</p>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-top: 2px;">Dinero real ahorrado</p>
+                </div>
+                <p id="savings-fund-balance" style="font-size: 32px; font-weight: bold; color: var(--primary);">0.00 €</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <button onclick="showSavingsFundModal('deposit')" style="background: var(--primary); color: var(--bg-dark); border: none; border-radius: 10px; padding: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                    Ingresar
+                </button>
+                <button onclick="showSavingsFundModal('withdraw')" style="background: transparent; color: var(--danger); border: 1px solid var(--danger); border-radius: 10px; padding: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                    Retirar
+                </button>
+            </div>
+            
+            <!-- Recent Transactions -->
+            <div id="savings-fund-history" style="max-height: 200px; overflow-y: auto;">
+                <p style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 12px;">Sin movimientos</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Savings Fund Modal -->
+    <div id="savings-fund-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: var(--bg-card); border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <p id="savings-modal-title" style="font-weight: 600; font-size: 18px;">Ingresar al Fondo</p>
+                <button onclick="hideSavingsFundModal()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; font-size: 20px;">✕</button>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Cantidad (€)</label>
+                <input type="number" inputmode="decimal" id="savings-modal-amount" placeholder="0.00" min="0" step="0.01"
+                    style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 18px; outline: none; box-sizing: border-box; text-align: center; font-weight: bold;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="color: var(--text-secondary); font-size: 12px; display: block; margin-bottom: 6px;">Descripción</label>
+                <input type="text" id="savings-modal-description" placeholder="Ej: Nómina Enero, Avería coche..."
+                    style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 14px 16px; color: var(--text-primary); font-size: 14px; outline: none; box-sizing: border-box;">
+            </div>
+            
+            <input type="hidden" id="savings-modal-type" value="deposit">
+            
+            <button onclick="saveSavingsFundTransaction()" id="savings-modal-btn" class="btn-primary" style="width: 100%;">
+                Confirmar Ingreso
+            </button>
+        </div>
+    </div>
+    
     <!-- Tab Bar -->
     <nav class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('nomina')">
@@ -975,6 +1168,10 @@
         <button class="tab-btn" onclick="switchTab('historial')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Historial
+        </button>
+        <button class="tab-btn" onclick="switchTab('dashboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+            Panel
         </button>
         <button class="tab-btn" onclick="switchTab('bancos')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
@@ -987,10 +1184,6 @@
         <button class="tab-btn" onclick="switchTab('prestamos')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             Préstamos
-        </button>
-        <button class="tab-btn" onclick="switchTab('stats')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            Estadísticas
         </button>
     </nav>
     

@@ -1,9 +1,11 @@
-// Version: 2025-07-28-v12
+// Version: 2025-07-28-v13
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
 const EXPENSES_KEY = 'mis-finanzas-pro-expenses';
 const LOANS_KEY = 'mis-finanzas-pro-loans';
+const SAVINGS_FUND_KEY = 'mis-finanzas-pro-savings-fund';
+const SAVINGS_HISTORY_KEY = 'mis-finanzas-pro-savings-history';
 
 const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -236,6 +238,7 @@ function switchTab(tab) {
     if (tab === 'bancos') updateBanksList();
     if (tab === 'gastos') updateExpensesList();
     if (tab === 'prestamos') updateLoansList();
+    if (tab === 'dashboard') updateDashboard();
     if (tab === 'stats') updateStats();
     if (tab === 'historial') updateHistorial();
 }
@@ -572,6 +575,7 @@ function addExpense() {
     const monthEl = document.getElementById('expense-month');
     const month = monthEl ? parseInt(monthEl.value) || 1 : null;
     const bankId = document.getElementById('expense-bank').value;
+    const category = document.getElementById('expense-category').value;
     
     if (!name) {
         alert('Introduce un nombre para el gasto');
@@ -591,7 +595,8 @@ function addExpense() {
         frequency: frequency,
         day: day,
         month: frequency === 'anual' ? month : null,
-        bankId: bankId
+        bankId: bankId,
+        category: category
     });
     
     saveExpenses(expenses);
@@ -602,6 +607,7 @@ function addExpense() {
     document.getElementById('expense-day').value = '';
     if (monthEl) monthEl.value = '';
     document.getElementById('expense-bank').value = '';
+    document.getElementById('expense-category').value = 'necesidades';
     
     updateExpensesList();
 }
@@ -776,6 +782,7 @@ function saveLoan() {
     const startDate = document.getElementById('loan-start-date').value;
     const installments = parseInt(document.getElementById('loan-installments').value) || 0;
     const payment = parseFloat(document.getElementById('loan-payment').value) || 0;
+    const category = document.getElementById('loan-category').value;
     const editId = document.getElementById('loan-edit-id').value;
     
     if (!description) {
@@ -798,6 +805,7 @@ function saveLoan() {
         startDate,
         installments,
         payment,
+        category,
         totalCost: installments * payment,
         paidOff: false
     };
@@ -808,6 +816,7 @@ function saveLoan() {
         if (index !== -1) {
             loanData.id = editId;
             loanData.paidOff = loans[index].paidOff;
+            loanData.category = loans[index].category || category;
             loans[index] = loanData;
         }
     } else {
@@ -992,6 +1001,339 @@ function updateLoansList() {
     // Update summary
     document.getElementById('loans-total-debt').textContent = totalDebt.toFixed(2) + ' €';
     document.getElementById('loans-monthly-payment').textContent = totalMonthly.toFixed(2) + ' €';
+}
+
+// ==================== DASHBOARD ====================
+function getSavingsFund() {
+    const data = localStorage.getItem(SAVINGS_FUND_KEY);
+    return data ? parseFloat(data) : 0;
+}
+
+function saveSavingsFund(balance) {
+    localStorage.setItem(SAVINGS_FUND_KEY, balance.toString());
+}
+
+function getSavingsHistory() {
+    const data = localStorage.getItem(SAVINGS_HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+function saveSavingsHistory(history) {
+    localStorage.setItem(SAVINGS_HISTORY_KEY, JSON.stringify(history));
+}
+
+function updateDashboard() {
+    // Populate period selector
+    const periodSelect = document.getElementById('dashboard-period');
+    const data = getData();
+    const currentValue = periodSelect.value;
+    
+    periodSelect.innerHTML = '<option value="current">Nómina Actual (sin archivar)</option>';
+    
+    // Add archived months from historial
+    const sortedData = data.sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year;
+        return b.month - a.month;
+    });
+    
+    sortedData.forEach(record => {
+        const option = document.createElement('option');
+        option.value = record.id;
+        option.textContent = `${months[record.month - 1]} ${record.year}`;
+        periodSelect.appendChild(option);
+    });
+    
+    // Restore selection if exists
+    if (currentValue && periodSelect.querySelector(`option[value="${currentValue}"]`)) {
+        periodSelect.value = currentValue;
+    }
+    
+    // Get net income for selected period
+    let netIncome = 0;
+    let periodLabel = 'Nómina Actual';
+    
+    if (periodSelect.value === 'current') {
+        // Get from current payroll form
+        netIncome = parseFloat(document.getElementById('total-neto')?.textContent) || 0;
+        periodLabel = 'Nómina Actual';
+    } else {
+        const record = data.find(r => r.id === periodSelect.value);
+        if (record) {
+            netIncome = record.totalNeto || 0;
+            periodLabel = `${months[record.month - 1]} ${record.year}`;
+        }
+    }
+    
+    document.getElementById('dashboard-net-income').textContent = netIncome.toFixed(2) + ' €';
+    document.getElementById('dashboard-period-label').textContent = periodLabel;
+    
+    // Calculate 50/30/20 rule
+    const expenses = getExpenses();
+    const loans = getLoans();
+    
+    // Calculate monthly amounts by category
+    let categoryTotals = { necesidades: 0, ocio: 0, ahorro: 0 };
+    
+    expenses.forEach(e => {
+        const monthlyAmount = e.frequency === 'anual' ? e.amount / 12 : e.amount;
+        const cat = e.category || 'necesidades';
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + monthlyAmount;
+    });
+    
+    loans.forEach(l => {
+        if (!l.paidOff) {
+            const status = calculateLoanStatus(l);
+            if (status.remainingInstallments > 0) {
+                const cat = l.category || 'necesidades';
+                categoryTotals[cat] = (categoryTotals[cat] || 0) + l.payment;
+            }
+        }
+    });
+    
+    // Update 50/30/20 display
+    const targets = {
+        necesidades: netIncome * 0.50,
+        ocio: netIncome * 0.30,
+        ahorro: netIncome * 0.20
+    };
+    
+    // Necesidades
+    document.getElementById('rule-necesidades-target').textContent = targets.necesidades.toFixed(2) + ' €';
+    document.getElementById('rule-necesidades-actual').textContent = categoryTotals.necesidades.toFixed(2) + ' €';
+    const necesidadesPercent = targets.necesidades > 0 ? (categoryTotals.necesidades / targets.necesidades) * 100 : 0;
+    document.getElementById('rule-necesidades-bar').style.width = Math.min(150, necesidadesPercent) + '%';
+    updateRuleStatus('necesidades', categoryTotals.necesidades, targets.necesidades);
+    
+    // Ocio
+    document.getElementById('rule-ocio-target').textContent = targets.ocio.toFixed(2) + ' €';
+    document.getElementById('rule-ocio-actual').textContent = categoryTotals.ocio.toFixed(2) + ' €';
+    const ocioPercent = targets.ocio > 0 ? (categoryTotals.ocio / targets.ocio) * 100 : 0;
+    document.getElementById('rule-ocio-bar').style.width = Math.min(150, ocioPercent) + '%';
+    updateRuleStatus('ocio', categoryTotals.ocio, targets.ocio);
+    
+    // Ahorro
+    document.getElementById('rule-ahorro-target').textContent = targets.ahorro.toFixed(2) + ' €';
+    document.getElementById('rule-ahorro-actual').textContent = categoryTotals.ahorro.toFixed(2) + ' €';
+    const ahorroPercent = targets.ahorro > 0 ? (categoryTotals.ahorro / targets.ahorro) * 100 : 0;
+    document.getElementById('rule-ahorro-bar').style.width = Math.min(150, ahorroPercent) + '%';
+    updateRuleStatus('ahorro', categoryTotals.ahorro, targets.ahorro);
+    
+    // Update bank breakdown
+    updateBankBreakdown();
+    
+    // Update annual summary
+    updateAnnualSummary();
+    
+    // Update savings fund
+    updateSavingsFundDisplay();
+}
+
+function updateRuleStatus(category, actual, target) {
+    const statusEl = document.getElementById(`rule-${category}-status`);
+    const diff = target - actual;
+    
+    if (target === 0) {
+        statusEl.textContent = '--';
+        statusEl.style.background = 'var(--bg-card)';
+        statusEl.style.color = 'var(--text-secondary)';
+    } else if (diff >= 0) {
+        statusEl.textContent = `✓ ${diff.toFixed(0)}€ libre`;
+        statusEl.style.background = 'rgba(0, 212, 170, 0.2)';
+        statusEl.style.color = 'var(--primary)';
+    } else {
+        statusEl.textContent = `⚠ ${Math.abs(diff).toFixed(0)}€ exceso`;
+        statusEl.style.background = 'rgba(255, 107, 107, 0.2)';
+        statusEl.style.color = 'var(--danger)';
+    }
+}
+
+function updateBankBreakdown() {
+    const banks = getBanks();
+    const expenses = getExpenses();
+    const loans = getLoans();
+    const container = document.getElementById('dashboard-banks-breakdown');
+    
+    if (banks.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No hay bancos configurados</p>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    banks.forEach(bank => {
+        const bankExpenses = expenses.filter(e => e.bankId === bank.id);
+        const bankLoans = loans.filter(l => l.bankId === bank.id && !l.paidOff);
+        
+        let total = 0;
+        
+        // Calculate expenses total
+        bankExpenses.forEach(e => {
+            const monthly = e.frequency === 'anual' ? e.amount / 12 : e.amount;
+            total += monthly;
+        });
+        
+        // Calculate active loans total
+        bankLoans.forEach(l => {
+            const status = calculateLoanStatus(l);
+            if (status.remainingInstallments > 0) {
+                total += l.payment;
+            }
+        });
+        
+        const card = document.createElement('div');
+        card.style.cssText = 'background: var(--bg-input); border-radius: 10px; padding: 14px; margin-bottom: 12px;';
+        
+        let itemsHtml = '';
+        bankExpenses.forEach(e => {
+            const monthly = e.frequency === 'anual' ? e.amount / 12 : e.amount;
+            itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span style="color: var(--text-secondary);">${e.name}</span><span>${monthly.toFixed(2)} €</span></div>`;
+        });
+        bankLoans.forEach(l => {
+            const status = calculateLoanStatus(l);
+            if (status.remainingInstallments > 0) {
+                itemsHtml += `<div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;"><span style="color: var(--purple);">📋 ${l.description}</span><span>${l.payment.toFixed(2)} €</span></div>`;
+            }
+        });
+        
+        if (!itemsHtml) {
+            itemsHtml = '<p style="color: var(--text-secondary); font-size: 12px;">Sin gastos asignados</p>';
+        }
+        
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-weight: 600;">🏦 ${bank.name}</span>
+                <span style="font-weight: bold; color: var(--primary);">${total.toFixed(2)} €</span>
+            </div>
+            ${itemsHtml}
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+function updateAnnualSummary() {
+    const currentYear = new Date().getFullYear();
+    const data = getData();
+    const yearData = data.filter(r => r.year === currentYear);
+    
+    document.getElementById('dashboard-annual-year').textContent = currentYear;
+    
+    let totalBruto = 0;
+    let totalIrpf = 0;
+    let totalSS = 0;
+    
+    yearData.forEach(r => {
+        totalBruto += r.totalBruto || 0;
+        totalIrpf += r.irpfAmount || 0;
+        totalSS += r.ssAmount || 0;
+    });
+    
+    document.getElementById('dashboard-annual-bruto').textContent = totalBruto.toFixed(2) + ' €';
+    document.getElementById('dashboard-annual-irpf').textContent = totalIrpf.toFixed(2) + ' €';
+    document.getElementById('dashboard-annual-ss').textContent = totalSS.toFixed(2) + ' €';
+}
+
+function updateSavingsFundDisplay() {
+    const balance = getSavingsFund();
+    document.getElementById('savings-fund-balance').textContent = balance.toFixed(2) + ' €';
+    
+    // Update history
+    const history = getSavingsHistory();
+    const container = document.getElementById('savings-fund-history');
+    
+    if (history.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 12px;">Sin movimientos</p>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    // Show last 10 transactions
+    const recent = history.slice(-10).reverse();
+    recent.forEach(tx => {
+        const date = new Date(tx.date);
+        const dateStr = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+        const isDeposit = tx.type === 'deposit';
+        
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bg-input);';
+        row.innerHTML = `
+            <div>
+                <p style="font-size: 13px; font-weight: 500;">${tx.description || (isDeposit ? 'Ingreso' : 'Retiro')}</p>
+                <p style="font-size: 11px; color: var(--text-secondary);">${dateStr}</p>
+            </div>
+            <span style="font-weight: 600; color: ${isDeposit ? 'var(--primary)' : 'var(--danger)'};">
+                ${isDeposit ? '+' : '-'}${tx.amount.toFixed(2)} €
+            </span>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function showSavingsFundModal(type) {
+    const modal = document.getElementById('savings-fund-modal');
+    const title = document.getElementById('savings-modal-title');
+    const btn = document.getElementById('savings-modal-btn');
+    
+    document.getElementById('savings-modal-type').value = type;
+    document.getElementById('savings-modal-amount').value = '';
+    document.getElementById('savings-modal-description').value = '';
+    
+    if (type === 'deposit') {
+        title.textContent = 'Ingresar al Fondo';
+        btn.textContent = 'Confirmar Ingreso';
+        btn.style.background = 'var(--primary)';
+    } else {
+        title.textContent = 'Retirar del Fondo';
+        btn.textContent = 'Confirmar Retiro';
+        btn.style.background = 'var(--danger)';
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function hideSavingsFundModal() {
+    document.getElementById('savings-fund-modal').classList.add('hidden');
+}
+
+function saveSavingsFundTransaction() {
+    const type = document.getElementById('savings-modal-type').value;
+    const amount = parseFloat(document.getElementById('savings-modal-amount').value) || 0;
+    const description = document.getElementById('savings-modal-description').value.trim();
+    
+    if (amount <= 0) {
+        alert('Introduce una cantidad válida');
+        return;
+    }
+    
+    let balance = getSavingsFund();
+    
+    if (type === 'withdraw' && amount > balance) {
+        alert('No hay suficiente saldo en el fondo');
+        return;
+    }
+    
+    // Update balance
+    if (type === 'deposit') {
+        balance += amount;
+    } else {
+        balance -= amount;
+    }
+    saveSavingsFund(balance);
+    
+    // Add to history
+    const history = getSavingsHistory();
+    history.push({
+        id: Date.now().toString(),
+        type: type,
+        amount: amount,
+        description: description,
+        date: new Date().toISOString()
+    });
+    saveSavingsHistory(history);
+    
+    hideSavingsFundModal();
+    updateSavingsFundDisplay();
 }
 
 // ==================== STATS ====================
@@ -1224,6 +1566,8 @@ function exportData() {
         banks: getBanks(),
         expenses: getExpenses(),
         loans: getLoans(),
+        savings_fund: getSavingsFund(),
+        savings_history: getSavingsHistory(),
         exported_at: new Date().toISOString()
     };
     
@@ -1250,6 +1594,8 @@ function importData(event) {
                 if (data.banks) saveBanks(data.banks);
                 if (data.expenses) saveExpenses(data.expenses);
                 if (data.loans) saveLoans(data.loans);
+                if (data.savings_fund !== undefined) saveSavingsFund(data.savings_fund);
+                if (data.savings_history) saveSavingsHistory(data.savings_history);
                 
                 updateBanksList();
                 updateExpensesList();
