@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v42 -->
+<!-- Updated: 2025-07-28-v43 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -707,13 +707,13 @@
     </div>
     
     <!-- Lock Screen (shown when PIN exists and app loads) - Background Image Layout -->
-    <div id="lock-screen" class="hidden" style="position: fixed; inset: 0; z-index: 9998; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: url('./welcome-image.png') center top / cover no-repeat; background-color: var(--bg-dark);">
+    <div id="lock-screen" class="hidden" style="position: fixed; inset: 0; z-index: 9998; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 24px; padding-bottom: 40px; background: url('./welcome-image.png') center center / cover no-repeat; background-color: var(--bg-dark);">
         
-        <!-- Dark Overlay for Readability -->
-        <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10, 10, 20, 0.3) 0%, rgba(10, 10, 20, 0.6) 40%, rgba(10, 10, 20, 0.85) 100%); z-index: 0;"></div>
+        <!-- Dark Overlay for Readability - Darker at bottom only -->
+        <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10, 10, 20, 0.1) 0%, rgba(10, 10, 20, 0.3) 50%, rgba(10, 10, 20, 0.85) 85%, rgba(10, 10, 20, 0.95) 100%); z-index: 0;"></div>
         
-        <!-- Content Container -->
-        <div style="max-width: 320px; width: 100%; text-align: center; position: relative; z-index: 1; margin-top: auto;">
+        <!-- Content Container - positioned at bottom -->
+        <div style="max-width: 320px; width: 100%; text-align: center; position: relative; z-index: 1;">
             
             <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; text-shadow: 0 2px 8px rgba(0,0,0,0.7);">Introduce tu PIN para acceder</p>
             
@@ -753,7 +753,7 @@
                 (Atención: Esto borrará todos los datos locales. Necesitas tu último archivo de respaldo JSON para restaurar.)
             </p>
             
-            <p style="color: rgba(255,255,255,0.5); font-size: 10px; margin-top: 20px; margin-bottom: 20px; letter-spacing: 0.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
+            <p style="color: rgba(255,255,255,0.5); font-size: 10px; margin-top: 20px; margin-bottom: 10px; letter-spacing: 0.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.5);">
                 Crafted by Peter Fernandes | Precision Security
             </p>
         </div>
