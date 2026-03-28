@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v23
+// Version: 2025-07-28-v24
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -66,13 +66,16 @@ const ssConcepts = [
     { id: 'ss_fogasa', name: 'Fondo Garantía Social (FOGASA)', defaultPercent: 0.000, editable: false, syncWithBruto: false },
     { id: 'ss_horas_fm', name: 'Horas extras fuerza mayor', defaultPercent: 2.0, editable: false, syncWithBruto: false },
     { id: 'ss_horas_nfm', name: 'Horas extras no fuerza mayor', defaultPercent: 4.7, editable: false, syncWithBruto: false },
-    { id: 'ss_mei', name: 'MEI', defaultPercent: 0.12, editable: false, syncWithBruto: true },
+    { id: 'ss_mei', name: 'MEI', defaultPercent: 0.15, editable: false, syncWithBruto: true },
     { id: 'ss_extra1', name: 'Concepto Extra S.S. 1', defaultPercent: 0, editable: true, syncWithBruto: false },
     { id: 'ss_extra2', name: 'Concepto Extra S.S. 2', defaultPercent: 0, editable: true, syncWithBruto: false }
 ];
 
 // Track which SS Base fields have been manually edited (stops auto-sync)
 const ssManuallyEdited = {};
+
+// Persistent percentage configuration key
+const CONFIG_PERCENTAGES_KEY = 'mis-finanzas-pro-config-percentages';
 
 let selectedMonth = new Date().getMonth() + 1;
 let selectedYear = new Date().getFullYear();
@@ -83,6 +86,7 @@ let chart = null;
 document.addEventListener('DOMContentLoaded', () => {
     initPayrollTable();
     initSSTable();
+    loadSavedPercentages(); // Load saved percentages from localStorage
     initMonthPicker();
     updateDateDisplay();
     initAllYearDropdowns(); // Initialize all year dropdowns (2020-2045)
@@ -192,6 +196,95 @@ function calculateSSRow(conceptId) {
     const cuota = base * (percent / 100);
     document.getElementById(`${conceptId}_cuota`).textContent = formatNumber(cuota);
     
+    // Save percentage to localStorage for persistence
+    savePercentageConfig(conceptId, percent);
+    
+    calculateTotals();
+}
+
+// ==================== PERSISTENT PERCENTAGES ====================
+// Save percentage configuration to localStorage
+function savePercentageConfig(conceptId, value) {
+    const config = getPercentageConfig();
+    config[conceptId] = value;
+    localStorage.setItem(CONFIG_PERCENTAGES_KEY, JSON.stringify(config));
+}
+
+// Get all percentage configurations from localStorage
+function getPercentageConfig() {
+    const stored = localStorage.getItem(CONFIG_PERCENTAGES_KEY);
+    return stored ? JSON.parse(stored) : {};
+}
+
+// Load saved percentages when initializing SS table
+function loadSavedPercentages() {
+    const config = getPercentageConfig();
+    
+    ssConcepts.forEach(concept => {
+        const percentInput = document.getElementById(`${concept.id}_percent`);
+        if (percentInput && config[concept.id] !== undefined) {
+            percentInput.value = config[concept.id];
+        }
+    });
+    
+    // Also load IRPF retention if saved
+    const irpfRetInput = document.getElementById('irpf_retencion_percent');
+    if (irpfRetInput && config['irpf_retencion'] !== undefined) {
+        irpfRetInput.value = config['irpf_retencion'];
+    }
+}
+
+// Save IRPF retention percentage
+function saveIRPFPercentage() {
+    const irpfInput = document.getElementById('irpf_retencion_percent');
+    if (irpfInput) {
+        const value = parseFloat(irpfInput.value) || 0;
+        savePercentageConfig('irpf_retencion', value);
+    }
+}
+
+// ==================== CLEAR/VACIAR FUNCTION ====================
+// Clears only monetary amounts, NOT percentages
+function clearPayrollAmounts() {
+    // Confirm before clearing
+    if (!confirm('¿Vaciar todos los importes?\n\nEsto borrará las cantidades de la nómina pero mantendrá los porcentajes guardados.')) {
+        return;
+    }
+    
+    // Clear payroll table amounts (Unidad, Precio, Deducir)
+    concepts.forEach(concept => {
+        const unidadInput = document.getElementById(`${concept.id}_unidad`);
+        const precioInput = document.getElementById(`${concept.id}_precio`);
+        const deducirInput = document.getElementById(`${concept.id}_deducir`);
+        
+        if (unidadInput) unidadInput.value = '';
+        if (precioInput) precioInput.value = '';
+        if (deducirInput) deducirInput.value = '';
+        
+        // Reset display values
+        const abonarEl = document.getElementById(`${concept.id}_abonar`);
+        const totalEl = document.getElementById(`${concept.id}_total`);
+        if (abonarEl) abonarEl.textContent = '0,00';
+        if (totalEl) totalEl.textContent = '0,00';
+    });
+    
+    // Clear SS table bases (but NOT percentages)
+    ssConcepts.forEach(concept => {
+        const baseInput = document.getElementById(`${concept.id}_base`);
+        const cuotaEl = document.getElementById(`${concept.id}_cuota`);
+        
+        if (baseInput) baseInput.value = '';
+        if (cuotaEl) cuotaEl.textContent = '0,00';
+        
+        // Reset manual edit tracking
+        ssManuallyEdited[concept.id] = false;
+    });
+    
+    // Clear IRPF base (but NOT percentage)
+    const irpfBaseInput = document.getElementById('irpf_remuneracion');
+    if (irpfBaseInput) irpfBaseInput.value = '';
+    
+    // Recalculate totals
     calculateTotals();
 }
 
@@ -1722,6 +1815,20 @@ function deleteRecord(id) {
 }
 
 // ==================== HISTORIAL ====================
+// Print historial report
+function printHistorialReport() {
+    const selectedYear = document.getElementById('historial-year').value;
+    
+    // Update print header with selected year
+    const printTitle = document.getElementById('print-year-title');
+    if (printTitle) {
+        printTitle.textContent = `Año Fiscal: ${selectedYear}`;
+    }
+    
+    // Trigger print
+    window.print();
+}
+
 function updateHistorial() {
     const selectedYear = parseInt(document.getElementById('historial-year').value);
     const data = getData();
