@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v29
+// Version: 2025-07-28-v30
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1202,22 +1202,59 @@ function updateDashboardMonths() {
     const yearSelect = document.getElementById('dashboard-year');
     const monthSelect = document.getElementById('dashboard-month');
     const selectedYear = parseInt(yearSelect.value);
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1; // 1-12
     const data = getData();
     
-    // Filter records for selected year
+    // Get records for selected year
     const yearRecords = data.filter(r => r.year === selectedYear);
     
-    monthSelect.innerHTML = '<option value="current">Nómina Actual</option>';
-    
-    // Sort by month descending
-    yearRecords.sort((a, b) => b.month - a.month);
-    
+    // Build a map of existing records by month
+    const recordsByMonth = {};
     yearRecords.forEach(record => {
-        const option = document.createElement('option');
-        option.value = record.id;
-        option.textContent = months[record.month - 1];
-        monthSelect.appendChild(option);
+        recordsByMonth[record.month] = record;
     });
+    
+    // Clear and populate month selector with ALL months
+    monthSelect.innerHTML = '';
+    
+    // Add "Nómina Actual" option only for current year
+    if (selectedYear === currentYear) {
+        const currentOption = document.createElement('option');
+        currentOption.value = 'current';
+        currentOption.textContent = '📝 Nómina Actual (en edición)';
+        monthSelect.appendChild(currentOption);
+    }
+    
+    // Add all 12 months (descending order - December to January)
+    for (let m = 12; m >= 1; m--) {
+        const option = document.createElement('option');
+        const hasRecord = recordsByMonth[m];
+        
+        if (hasRecord) {
+            option.value = hasRecord.id;
+            option.textContent = `${months[m - 1]} ✓`;
+            option.style.color = 'var(--primary)';
+        } else {
+            option.value = `empty-${m}`;
+            option.textContent = `${months[m - 1]} (sin datos)`;
+            option.style.color = 'var(--text-secondary)';
+        }
+        
+        monthSelect.appendChild(option);
+    }
+    
+    // Set default selection to current month if viewing current year
+    if (selectedYear === currentYear) {
+        // Select "Nómina Actual" for current month
+        monthSelect.value = 'current';
+    } else {
+        // For other years, select the most recent month with data, or December
+        const mostRecentRecord = yearRecords.sort((a, b) => b.month - a.month)[0];
+        if (mostRecentRecord) {
+            monthSelect.value = mostRecentRecord.id;
+        }
+    }
     
     updateDashboard();
 }
@@ -1232,17 +1269,24 @@ function updateDashboard() {
     
     const monthSelect = document.getElementById('dashboard-month');
     const data = getData();
+    const selectedValue = monthSelect.value;
     
     // Get net income for selected period
     let netIncome = 0;
-    let periodLabel = 'Nómina Actual';
+    let periodLabel = 'Sin datos';
     
-    if (monthSelect.value === 'current') {
+    if (selectedValue === 'current') {
         // Get from current payroll form
-        netIncome = parseFloat(document.getElementById('total-neto')?.textContent) || 0;
+        netIncome = parseFloat(document.getElementById('total-neto')?.textContent?.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
         periodLabel = 'Nómina Actual';
+    } else if (selectedValue.startsWith('empty-')) {
+        // Empty month selected
+        const monthNum = parseInt(selectedValue.replace('empty-', ''));
+        const selectedYear = parseInt(yearSelect.value);
+        netIncome = 0;
+        periodLabel = `${months[monthNum - 1]} ${selectedYear} (sin datos)`;
     } else {
-        const record = data.find(r => r.id === monthSelect.value);
+        const record = data.find(r => r.id === selectedValue);
         if (record) {
             netIncome = record.totalNeto || 0;
             periodLabel = `${months[record.month - 1]} ${record.year}`;
