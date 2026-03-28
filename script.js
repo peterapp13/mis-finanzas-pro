@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v22
+// Version: 2025-07-28-v23
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSSTable();
     initMonthPicker();
     updateDateDisplay();
+    initAllYearDropdowns(); // Initialize all year dropdowns (2020-2045)
     updateBanksList();
     updateExpensesList();
     updateLoansList();
@@ -1056,24 +1057,50 @@ function saveSavingsHistory(history) {
     localStorage.setItem(SAVINGS_HISTORY_KEY, JSON.stringify(history));
 }
 
-function initDashboardSelectors() {
-    const yearSelect = document.getElementById('dashboard-year');
-    const data = getData();
+// ==================== DYNAMIC YEAR DROPDOWNS (2020-2045) ====================
+// Global function to populate year dropdowns dynamically
+// Range: 2020 to 2045, with current year selected by default
+function populateYearDropdown(selectElement, selectedYear = null) {
+    if (!selectElement) return;
+    
     const currentYear = new Date().getFullYear();
+    const startYear = 2020;
+    const endYear = 2045;
     
-    // Get unique years from data
-    const years = [...new Set(data.map(r => r.year))];
-    if (!years.includes(currentYear)) years.push(currentYear);
-    years.sort((a, b) => b - a);
+    // Use provided year or default to current year
+    const yearToSelect = selectedYear || currentYear;
     
-    yearSelect.innerHTML = '';
-    years.forEach(year => {
+    selectElement.innerHTML = '';
+    
+    // Populate years in descending order (newest first)
+    for (let year = endYear; year >= startYear; year--) {
         const option = document.createElement('option');
         option.value = year;
         option.textContent = year;
-        if (year === currentYear) option.selected = true;
-        yearSelect.appendChild(option);
-    });
+        if (year === yearToSelect) option.selected = true;
+        selectElement.appendChild(option);
+    }
+}
+
+// Initialize all year dropdowns in the app
+function initAllYearDropdowns() {
+    const currentYear = new Date().getFullYear();
+    
+    // Dashboard year selector
+    const dashboardYearSelect = document.getElementById('dashboard-year');
+    populateYearDropdown(dashboardYearSelect, currentYear);
+    
+    // Historial year selector
+    const historialYearSelect = document.getElementById('historial-year');
+    populateYearDropdown(historialYearSelect, currentYear);
+}
+
+function initDashboardSelectors() {
+    // Initialize year dropdown with dynamic range (2020-2045)
+    const yearSelect = document.getElementById('dashboard-year');
+    const currentYear = new Date().getFullYear();
+    
+    populateYearDropdown(yearSelect, currentYear);
     
     updateDashboardMonths();
 }
