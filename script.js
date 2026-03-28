@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v18
+// Version: 2025-07-28-v19
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -667,7 +667,7 @@ function updateExpensesList() {
         emptyState.style.display = 'block';
         const existingRows = container.querySelectorAll('.expense-row');
         existingRows.forEach(row => row.remove());
-        document.getElementById('expenses-monthly-total').textContent = '0.00 €';
+        document.getElementById('expenses-monthly-total').textContent = formatCurrency(0);
         return;
     }
     
@@ -773,7 +773,7 @@ function showLoanForm(loanId = null) {
         document.getElementById('loan-installments').value = '';
         document.getElementById('loan-payment').value = '';
         document.getElementById('loan-edit-id').value = '';
-        document.getElementById('loan-total-display').textContent = '0.00 €';
+        document.getElementById('loan-total-display').textContent = formatCurrency(0);
     }
 }
 
@@ -918,8 +918,8 @@ function updateLoansList() {
         emptyState.style.display = 'block';
         const existingCards = container.querySelectorAll('.loan-card');
         existingCards.forEach(card => card.remove());
-        document.getElementById('loans-total-debt').textContent = '0.00 €';
-        document.getElementById('loans-monthly-payment').textContent = '0.00 €';
+        document.getElementById('loans-total-debt').textContent = formatCurrency(0);
+        document.getElementById('loans-monthly-payment').textContent = formatCurrency(0);
         return;
     }
     
@@ -967,15 +967,15 @@ function updateLoansList() {
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
                 <div style="background: var(--bg-input); border-radius: 8px; padding: 10px;">
                     <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Costo Inicial</p>
-                    <p style="font-weight: 600; margin-top: 2px;">${loan.principal.toFixed(2)} €</p>
+                    <p style="font-weight: 600; margin-top: 2px;">${formatCurrency(loan.principal)}</p>
                 </div>
                 <div style="background: var(--bg-input); border-radius: 8px; padding: 10px;">
                     <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Cuota Mensual</p>
-                    <p style="font-weight: 600; margin-top: 2px;">${loan.payment.toFixed(2)} €</p>
+                    <p style="font-weight: 600; margin-top: 2px;">${formatCurrency(loan.payment)}</p>
                 </div>
                 <div style="background: var(--bg-input); border-radius: 8px; padding: 10px;">
                     <p style="color: var(--text-secondary); font-size: 10px; text-transform: uppercase;">Total a Devolver</p>
-                    <p style="font-weight: 600; margin-top: 2px;">${loan.totalCost.toFixed(2)} €</p>
+                    <p style="font-weight: 600; margin-top: 2px;">${formatCurrency(loan.totalCost)}</p>
                 </div>
             </div>
             
@@ -986,7 +986,7 @@ function updateLoansList() {
                 </div>
                 <div style="background: rgba(255, 107, 107, 0.1); border-radius: 8px; padding: 12px; border: 1px solid var(--danger);">
                     <p style="color: var(--danger); font-size: 10px; text-transform: uppercase;">Dinero Pendiente</p>
-                    <p style="font-size: 24px; font-weight: bold; color: var(--danger); margin-top: 4px;">${status.pendingAmount.toFixed(2)} €</p>
+                    <p style="font-size: 24px; font-weight: bold; color: var(--danger); margin-top: 4px;">${formatCurrency(status.pendingAmount)}</p>
                 </div>
             </div>
             
@@ -1488,70 +1488,84 @@ function updateSavingsFundDisplay() {
     });
 }
 
+// Simplified Savings Fund with JavaScript prompt() - GLOBAL and PERSISTENT
+// This fund does NOT depend on the year filter - it's your real piggy bank
 function showSavingsFundModal(type) {
-    const modal = document.getElementById('savings-fund-modal');
-    const title = document.getElementById('savings-modal-title');
-    const btn = document.getElementById('savings-modal-btn');
-    
-    document.getElementById('savings-modal-type').value = type;
-    document.getElementById('savings-modal-amount').value = '';
-    document.getElementById('savings-modal-description').value = '';
+    const balance = getSavingsFund();
     
     if (type === 'deposit') {
-        title.textContent = 'Ingresar al Fondo';
-        btn.textContent = 'Confirmar Ingreso';
-        btn.style.background = 'var(--primary)';
+        const input = prompt('💰 INGRESAR AL FONDO DE AHORRO\n\nSaldo actual: ' + formatCurrency(balance) + '\n\nIntroduce la cantidad a ingresar (€):');
+        
+        if (input === null) return; // User cancelled
+        
+        const amount = parseFloat(input.replace(',', '.')) || 0;
+        
+        if (amount <= 0) {
+            alert('Introduce una cantidad válida mayor que 0');
+            return;
+        }
+        
+        const newBalance = balance + amount;
+        saveSavingsFund(newBalance);
+        
+        // Add to history
+        const history = getSavingsHistory();
+        history.push({
+            id: Date.now().toString(),
+            type: 'deposit',
+            amount: amount,
+            description: 'Ingreso manual',
+            date: new Date().toISOString()
+        });
+        saveSavingsHistory(history);
+        
+        alert('✅ Ingreso realizado\n\nNuevo saldo: ' + formatCurrency(newBalance));
+        updateSavingsFundDisplay();
+        
     } else {
-        title.textContent = 'Retirar del Fondo';
-        btn.textContent = 'Confirmar Retiro';
-        btn.style.background = 'var(--danger)';
+        const input = prompt('💸 RETIRAR DEL FONDO DE AHORRO\n\nSaldo actual: ' + formatCurrency(balance) + '\n\nIntroduce la cantidad a retirar (€):');
+        
+        if (input === null) return; // User cancelled
+        
+        const amount = parseFloat(input.replace(',', '.')) || 0;
+        
+        if (amount <= 0) {
+            alert('Introduce una cantidad válida mayor que 0');
+            return;
+        }
+        
+        if (amount > balance) {
+            alert('⚠️ No hay suficiente saldo en el fondo\n\nSaldo disponible: ' + formatCurrency(balance));
+            return;
+        }
+        
+        const newBalance = balance - amount;
+        saveSavingsFund(newBalance);
+        
+        // Add to history
+        const history = getSavingsHistory();
+        history.push({
+            id: Date.now().toString(),
+            type: 'withdraw',
+            amount: amount,
+            description: 'Retiro manual',
+            date: new Date().toISOString()
+        });
+        saveSavingsHistory(history);
+        
+        alert('✅ Retiro realizado\n\nNuevo saldo: ' + formatCurrency(newBalance));
+        updateSavingsFundDisplay();
     }
-    
-    modal.classList.remove('hidden');
 }
 
+// Legacy modal functions - kept for backwards compatibility but no longer used
 function hideSavingsFundModal() {
-    document.getElementById('savings-fund-modal').classList.add('hidden');
+    const modal = document.getElementById('savings-fund-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function saveSavingsFundTransaction() {
-    const type = document.getElementById('savings-modal-type').value;
-    const amount = parseFloat(document.getElementById('savings-modal-amount').value) || 0;
-    const description = document.getElementById('savings-modal-description').value.trim();
-    
-    if (amount <= 0) {
-        alert('Introduce una cantidad válida');
-        return;
-    }
-    
-    let balance = getSavingsFund();
-    
-    if (type === 'withdraw' && amount > balance) {
-        alert('No hay suficiente saldo en el fondo');
-        return;
-    }
-    
-    // Update balance
-    if (type === 'deposit') {
-        balance += amount;
-    } else {
-        balance -= amount;
-    }
-    saveSavingsFund(balance);
-    
-    // Add to history
-    const history = getSavingsHistory();
-    history.push({
-        id: Date.now().toString(),
-        type: type,
-        amount: amount,
-        description: description,
-        date: new Date().toISOString()
-    });
-    saveSavingsHistory(history);
-    
-    hideSavingsFundModal();
-    updateSavingsFundDisplay();
+    // Legacy - now handled directly in showSavingsFundModal
 }
 
 // ==================== STATS ====================
@@ -1591,9 +1605,9 @@ function updateStats() {
             row.className = 'table-row';
             row.innerHTML = `
                 <span style="flex: 1; font-size: 13px;">${monthsShort[r.month - 1]}</span>
-                <span style="flex: 1; font-size: 13px;">${r.totalBruto.toFixed(0)}€</span>
-                <span style="flex: 1; font-size: 13px; color: var(--primary);">${r.totalNeto.toFixed(0)}€</span>
-                <span style="flex: 1; font-size: 13px; color: var(--danger);">${r.irpfAmount.toFixed(0)}€</span>
+                <span style="flex: 1; font-size: 13px;">${formatCurrency(r.totalBruto)}</span>
+                <span style="flex: 1; font-size: 13px; color: var(--primary);">${formatCurrency(r.totalNeto)}</span>
+                <span style="flex: 1; font-size: 13px; color: var(--danger);">${formatCurrency(r.irpfAmount)}</span>
                 <button class="delete-btn" onclick="deleteRecord('${r.id}')">🗑️</button>
             `;
             rows.appendChild(row);

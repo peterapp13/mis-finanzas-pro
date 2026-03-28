@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v18 -->
+<!-- Updated: 2025-07-28-v19 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -518,7 +518,7 @@
         <!-- Total Bruto -->
         <div class="card" style="border: 1px solid var(--bg-input);">
             <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 4px;">Total Bruto</p>
-            <p id="total-bruto" style="font-size: 28px; font-weight: bold;">0.00 €</p>
+            <p id="total-bruto" style="font-size: 28px; font-weight: bold;">0,00 €</p>
         </div>
         
         <!-- RETENCIÓN I.R.P.F. Section -->
@@ -532,7 +532,7 @@
                 <!-- Box 1: Remuneración (Read-only) -->
                 <div style="background: var(--bg-input); border-radius: 10px; padding: 12px;">
                     <p style="color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; text-transform: uppercase;">Remuneración</p>
-                    <input type="text" id="irpf_remuneracion" value="0.00 €" disabled readonly 
+                    <input type="text" id="irpf_remuneracion" value="0,00 €" disabled readonly 
                         style="background: transparent; border: none; color: var(--text-primary); font-size: 16px; font-weight: 600; width: 100%; opacity: 0.8; cursor: not-allowed;">
                 </div>
                 
@@ -550,7 +550,7 @@
                 <!-- Box 3: Retención (Calculated) -->
                 <div style="background: var(--bg-input); border-radius: 10px; padding: 12px;">
                     <p style="color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; text-transform: uppercase;">Retención</p>
-                    <p id="irpf_retencion" style="color: var(--danger); font-size: 16px; font-weight: 600; margin: 0;">0.00 €</p>
+                    <p id="irpf_retencion" style="color: var(--danger); font-size: 16px; font-weight: 600; margin: 0;">0,00 €</p>
                 </div>
             </div>
         </div>
@@ -577,7 +577,7 @@
                     <tfoot>
                         <tr style="background: var(--bg-input);">
                             <td colspan="3" style="text-align: right; font-weight: 600; color: var(--purple); padding: 12px 8px;">Aportación total S.S.</td>
-                            <td id="ss-total-cuota" style="font-weight: bold; color: var(--purple); text-align: right; padding: 12px 8px;">0.00 €</td>
+                            <td id="ss-total-cuota" style="font-weight: bold; color: var(--purple); text-align: right; padding: 12px 8px;">0,00 €</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -595,7 +595,7 @@
             <!-- TOTAL A ABONAR -->
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--bg-input); border-radius: 10px; margin-bottom: 10px;">
                 <span style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">TOTAL A ABONAR</span>
-                <span id="resumen-abonar" style="color: var(--text-primary); font-size: 18px; font-weight: 600;">0.00 €</span>
+                <span id="resumen-abonar" style="color: var(--text-primary); font-size: 18px; font-weight: 600;">0,00 €</span>
             </div>
             
             <!-- TOTAL A DEDUCIR -->
@@ -604,13 +604,13 @@
                     <span style="color: var(--danger); font-size: 14px; font-weight: 500;">TOTAL A DEDUCIR</span>
                     <p style="color: var(--text-secondary); font-size: 11px; margin-top: 2px;">IRPF + Seguridad Social</p>
                 </div>
-                <span id="resumen-deducir" style="color: var(--danger); font-size: 18px; font-weight: 600;">-0.00 €</span>
+                <span id="resumen-deducir" style="color: var(--danger); font-size: 18px; font-weight: 600;">-0,00 €</span>
             </div>
             
             <!-- LÍQUIDO A PERCIBIR -->
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: linear-gradient(135deg, var(--primary) 0%, #00B894 100%); border-radius: 12px; margin-top: 16px;">
                 <span style="color: #0A0A14; font-size: 16px; font-weight: 700; text-transform: uppercase;">LÍQUIDO A PERCIBIR</span>
-                <span id="resumen-liquido" style="color: #0A0A14; font-size: 28px; font-weight: 800;">0.00 €</span>
+                <span id="resumen-liquido" style="color: #0A0A14; font-size: 28px; font-weight: 800;">0,00 €</span>
             </div>
         </div>
         
@@ -729,7 +729,7 @@
                     <p style="color: var(--text-secondary); font-size: 12px;">Total Gastos Mensuales</p>
                     <p style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;">(Anuales prorrateados)</p>
                 </div>
-                <p id="expenses-monthly-total" style="font-size: 28px; font-weight: bold; color: var(--primary);">0.00 €</p>
+                <p id="expenses-monthly-total" style="font-size: 28px; font-weight: bold; color: var(--primary);">0,00 €</p>
             </div>
         </div>
     </div>
@@ -743,11 +743,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
             <div class="card" style="border: 1px solid var(--danger);">
                 <p style="color: var(--text-secondary); font-size: 11px; text-transform: uppercase;">Deuda Total</p>
-                <p id="loans-total-debt" style="font-size: 22px; font-weight: bold; color: var(--danger); margin-top: 4px;">0.00 €</p>
+                <p id="loans-total-debt" style="font-size: 22px; font-weight: bold; color: var(--danger); margin-top: 4px;">0,00 €</p>
             </div>
             <div class="card" style="border: 1px solid var(--primary);">
                 <p style="color: var(--text-secondary); font-size: 11px; text-transform: uppercase;">Cuota Mensual</p>
-                <p id="loans-monthly-payment" style="font-size: 22px; font-weight: bold; color: var(--primary); margin-top: 4px;">0.00 €</p>
+                <p id="loans-monthly-payment" style="font-size: 22px; font-weight: bold; color: var(--primary); margin-top: 4px;">0,00 €</p>
             </div>
         </div>
         
@@ -825,7 +825,7 @@
             <div style="background: var(--bg-input); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: var(--text-secondary); font-size: 12px;">Costo Total a Devolver</span>
-                    <span id="loan-total-display" style="color: var(--danger); font-size: 18px; font-weight: bold;">0.00 €</span>
+                    <span id="loan-total-display" style="color: var(--danger); font-size: 18px; font-weight: bold;">0,00 €</span>
                 </div>
             </div>
             
@@ -865,14 +865,14 @@
                 <svg width="24" height="24" fill="var(--danger)" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
                 <span style="color: var(--danger); font-size: 14px; font-weight: 500;">Total IRPF <span id="irpf-year-label">2025</span></span>
             </div>
-            <p id="total-irpf" style="color: var(--danger); font-size: 42px; font-weight: bold; margin-top: 8px;">0.00 €</p>
+            <p id="total-irpf" style="color: var(--danger); font-size: 42px; font-weight: bold; margin-top: 8px;">0,00 €</p>
             <p style="color: var(--danger); font-size: 12px; opacity: 0.7;">Pagado a Hacienda este año</p>
         </div>
         
         <!-- Summary Cards -->
         <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-            <div class="card" style="flex: 1;"><p style="color: var(--text-secondary); font-size: 12px;">Total Bruto</p><p id="stats-bruto" style="font-size: 20px; font-weight: bold; margin-top: 4px;">0.00 €</p></div>
-            <div class="card" style="flex: 1;"><p style="color: var(--text-secondary); font-size: 12px;">Total Neto</p><p id="stats-neto" style="font-size: 20px; font-weight: bold; margin-top: 4px; color: var(--primary);">0.00 €</p></div>
+            <div class="card" style="flex: 1;"><p style="color: var(--text-secondary); font-size: 12px;">Total Bruto</p><p id="stats-bruto" style="font-size: 20px; font-weight: bold; margin-top: 4px;">0,00 €</p></div>
+            <div class="card" style="flex: 1;"><p style="color: var(--text-secondary); font-size: 12px;">Total Neto</p><p id="stats-neto" style="font-size: 20px; font-weight: bold; margin-top: 4px; color: var(--primary);">0,00 €</p></div>
         </div>
         
         <!-- Chart -->
@@ -1033,7 +1033,7 @@
                 </div>
                 <div style="flex: 1; min-width: 0;">
                     <p style="color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Fondo de Ahorro Real</p>
-                    <p id="savings-fund-balance" style="font-size: 26px; font-weight: bold; color: var(--primary); margin-top: 2px;">0.00 €</p>
+                    <p id="savings-fund-balance" style="font-size: 26px; font-weight: bold; color: var(--primary); margin-top: 2px;">0,00 €</p>
                 </div>
                 <div style="display: flex; gap: 8px; flex-shrink: 0;">
                     <button onclick="showSavingsFundModal('deposit')" style="width: 40px; height: 40px; border-radius: 10px; background: var(--primary); color: var(--bg-dark); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
@@ -1053,7 +1053,7 @@
                     <p style="color: var(--text-secondary); font-size: 12px;">Líquido del Período</p>
                     <p id="dashboard-period-label" style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;">Nómina Actual</p>
                 </div>
-                <p id="dashboard-net-income" style="font-size: 28px; font-weight: bold; color: var(--primary);">0.00 €</p>
+                <p id="dashboard-net-income" style="font-size: 28px; font-weight: bold; color: var(--primary);">0,00 €</p>
             </div>
         </div>
         
@@ -1069,11 +1069,11 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
                     <span style="color: var(--text-secondary);">Objetivo:</span>
-                    <span id="rule-necesidades-target">0.00 €</span>
+                    <span id="rule-necesidades-target">0,00 €</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
                     <span style="color: var(--text-secondary);">Actual:</span>
-                    <span id="rule-necesidades-actual" style="font-weight: 600;">0.00 €</span>
+                    <span id="rule-necesidades-actual" style="font-weight: 600;">0,00 €</span>
                 </div>
                 <div style="height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden;">
                     <div id="rule-necesidades-bar" style="height: 100%; background: var(--danger); width: 0%; transition: width 0.3s;"></div>
@@ -1088,11 +1088,11 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
                     <span style="color: var(--text-secondary);">Objetivo:</span>
-                    <span id="rule-ocio-target">0.00 €</span>
+                    <span id="rule-ocio-target">0,00 €</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
                     <span style="color: var(--text-secondary);">Actual:</span>
-                    <span id="rule-ocio-actual" style="font-weight: 600;">0.00 €</span>
+                    <span id="rule-ocio-actual" style="font-weight: 600;">0,00 €</span>
                 </div>
                 <div style="height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden;">
                     <div id="rule-ocio-bar" style="height: 100%; background: var(--purple); width: 0%; transition: width 0.3s;"></div>
@@ -1107,11 +1107,11 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
                     <span style="color: var(--text-secondary);">Objetivo:</span>
-                    <span id="rule-ahorro-target">0.00 €</span>
+                    <span id="rule-ahorro-target">0,00 €</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
                     <span style="color: var(--text-secondary);">Actual:</span>
-                    <span id="rule-ahorro-actual" style="font-weight: 600;">0.00 €</span>
+                    <span id="rule-ahorro-actual" style="font-weight: 600;">0,00 €</span>
                 </div>
                 <div style="height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden;">
                     <div id="rule-ahorro-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 0.3s;"></div>
@@ -1127,7 +1127,7 @@
                     <p style="color: var(--text-secondary); font-size: 11px; margin-top: 2px;">Suma de € libre (Necesidades + Ocio)</p>
                     <p style="color: var(--danger); font-size: 10px; margin-top: 4px; font-style: italic;">⚠️ No incluye el 20% de Ahorro</p>
                 </div>
-                <p id="dashboard-available-money" style="font-size: 32px; font-weight: bold; color: var(--purple);">0.00 €</p>
+                <p id="dashboard-available-money" style="font-size: 32px; font-weight: bold; color: var(--purple);">0,00 €</p>
             </div>
         </div>
         
