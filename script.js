@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v28
+// Version: 2025-07-28-v29
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2175,7 +2175,9 @@ function exportAllData() {
 }
 
 // Import data from JSON backup file
-function importAllData(event) {
+let pendingImportData = null; // Store parsed data for import
+
+function preParseImportFile(event) {
     const file = event.target.files[0];
     if (!file) return;
     
@@ -2188,36 +2190,61 @@ function importAllData(event) {
             // Validate backup structure
             if (!backup.data || typeof backup.data !== 'object') {
                 alert('❌ Error: El archivo no tiene un formato válido');
+                event.target.value = '';
                 return;
             }
             
-            // Confirm before overwriting
-            const confirmMsg = `⚠️ IMPORTAR DATOS\n\nEsto reemplazará TODOS tus datos actuales con los del archivo:\n\n📄 ${file.name}\n📅 Fecha backup: ${backup.exportDate ? new Date(backup.exportDate).toLocaleDateString('es-ES') : 'Desconocida'}\n\n¿Estás seguro?`;
+            // Store for later use
+            pendingImportData = backup;
             
-            if (!confirm(confirmMsg)) {
-                event.target.value = ''; // Reset file input
-                return;
+            // Count records in each category
+            const counts = {
+                nominas: 0,
+                bancos: 0,
+                transacciones: 0,
+                prestamos: 0
+            };
+            
+            // Count payroll records (nóminas)
+            if (backup.data[STORAGE_KEY]) {
+                const payrollData = Array.isArray(backup.data[STORAGE_KEY]) 
+                    ? backup.data[STORAGE_KEY] 
+                    : [];
+                counts.nominas = payrollData.length;
             }
             
-            // Clear existing data
-            ALL_STORAGE_KEYS.forEach(key => {
-                localStorage.removeItem(key);
-            });
+            // Count banks
+            if (backup.data[BANKS_KEY]) {
+                const banksData = Array.isArray(backup.data[BANKS_KEY]) 
+                    ? backup.data[BANKS_KEY] 
+                    : [];
+                counts.bancos = banksData.length;
+            }
             
-            // Import new data
-            Object.keys(backup.data).forEach(key => {
-                const value = backup.data[key];
-                if (typeof value === 'object') {
-                    localStorage.setItem(key, JSON.stringify(value));
-                } else {
-                    localStorage.setItem(key, value);
-                }
-            });
+            // Count transactions (expenses)
+            if (backup.data[EXPENSES_KEY]) {
+                const expensesData = Array.isArray(backup.data[EXPENSES_KEY]) 
+                    ? backup.data[EXPENSES_KEY] 
+                    : [];
+                counts.transacciones = expensesData.length;
+            }
             
-            alert('✅ Datos importados correctamente\n\nLa aplicación se recargará ahora.');
+            // Count loans
+            if (backup.data[LOANS_KEY]) {
+                const loansData = Array.isArray(backup.data[LOANS_KEY]) 
+                    ? backup.data[LOANS_KEY] 
+                    : [];
+                counts.prestamos = loansData.length;
+            }
             
-            // Reload app to apply changes
-            window.location.reload();
+            // Update modal UI
+            document.getElementById('import-count-nominas').textContent = counts.nominas;
+            document.getElementById('import-count-bancos').textContent = counts.bancos;
+            document.getElementById('import-count-transacciones').textContent = counts.transacciones;
+            document.getElementById('import-count-prestamos').textContent = counts.prestamos;
+            
+            // Show modal
+            document.getElementById('import-modal').classList.remove('hidden');
             
         } catch (error) {
             alert('❌ Error al leer el archivo\n\n' + error.message);
@@ -2232,6 +2259,99 @@ function importAllData(event) {
     
     // Reset file input for next use
     event.target.value = '';
+}
+
+function hideImportModal() {
+    document.getElementById('import-modal').classList.add('hidden');
+    pendingImportData = null;
+}
+
+function executeImport(mode) {
+    if (!pendingImportData) {
+        alert('❌ No hay datos para importar');
+        hideImportModal();
+        return;
+    }
+    
+    const backup = pendingImportData;
+    
+    if (mode === 'replace') {
+        // REPLACE MODE: Clear all existing data and load new
+        ALL_STORAGE_KEYS.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        
+        // Import new data
+        Object.keys(backup.data).forEach(key => {
+            const value = backup.data[key];
+            if (typeof value === 'object') {
+                localStorage.setItem(key, JSON.stringify(value));
+            } else {
+                localStorage.setItem(key, value);
+            }
+        });
+        
+        alert('✅ Datos reemplazados correctamente\n\nLa aplicación se recargará ahora.');
+        
+    } else if (mode === 'merge') {
+        // MERGE MODE: Append new data to existing
+        
+        // Merge payroll records
+        if (backup.data[STORAGE_KEY]) {
+            const existing = getData();
+            const incoming = Array.isArray(backup.data[STORAGE_KEY]) ? backup.data[STORAGE_KEY] : [];
+            const merged = [...existing, ...incoming];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        }
+        
+        // Merge banks
+        if (backup.data[BANKS_KEY]) {
+            const existing = getBanks();
+            const incoming = Array.isArray(backup.data[BANKS_KEY]) ? backup.data[BANKS_KEY] : [];
+            const merged = [...existing, ...incoming];
+            localStorage.setItem(BANKS_KEY, JSON.stringify(merged));
+        }
+        
+        // Merge expenses/transactions
+        if (backup.data[EXPENSES_KEY]) {
+            const existing = getExpenses();
+            const incoming = Array.isArray(backup.data[EXPENSES_KEY]) ? backup.data[EXPENSES_KEY] : [];
+            const merged = [...existing, ...incoming];
+            localStorage.setItem(EXPENSES_KEY, JSON.stringify(merged));
+        }
+        
+        // Merge loans
+        if (backup.data[LOANS_KEY]) {
+            const existing = getLoans();
+            const incoming = Array.isArray(backup.data[LOANS_KEY]) ? backup.data[LOANS_KEY] : [];
+            const merged = [...existing, ...incoming];
+            localStorage.setItem(LOANS_KEY, JSON.stringify(merged));
+        }
+        
+        // For savings fund, use the imported value (don't add)
+        if (backup.data[SAVINGS_FUND_KEY] !== undefined) {
+            // Keep existing value unless user specifically wants to update
+            // This avoids accidentally adding savings amounts
+        }
+        
+        // Merge savings history
+        if (backup.data[SAVINGS_HISTORY_KEY]) {
+            const existing = getSavingsHistory();
+            const incoming = Array.isArray(backup.data[SAVINGS_HISTORY_KEY]) ? backup.data[SAVINGS_HISTORY_KEY] : [];
+            const merged = [...existing, ...incoming];
+            localStorage.setItem(SAVINGS_HISTORY_KEY, JSON.stringify(merged));
+        }
+        
+        alert('✅ Datos combinados correctamente\n\n⚠️ Revisa si hay duplicados.\n\nLa aplicación se recargará ahora.');
+    }
+    
+    // Reload app to apply changes
+    window.location.reload();
+}
+
+// Legacy function - kept for backwards compatibility
+function importAllData(event) {
+    preParseImportFile(event);
 }
 
 // Delete ALL data with double confirmation

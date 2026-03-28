@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v28 -->
+<!-- Updated: 2025-07-28-v29 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1406,7 +1406,7 @@
                 <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
                 Importar Datos
             </button>
-            <input type="file" id="import-backup-file" accept=".json" style="display: none;" onchange="importAllData(event)">
+            <input type="file" id="import-backup-file" accept=".json" style="display: none;" onchange="preParseImportFile(event)">
             
             <p style="color: var(--text-secondary); font-size: 11px; margin-top: 12px; text-align: center;">
                 Guarda tu copia de seguridad en iCloud Drive o Files
@@ -1488,6 +1488,82 @@
             
             <button onclick="saveSavingsFundTransaction()" id="savings-modal-btn" class="btn-primary" style="width: 100%;">
                 Confirmar Ingreso
+            </button>
+        </div>
+    </div>
+    
+    <!-- Import Data Modal -->
+    <div id="import-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1001; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #1a1a2e; border-radius: 16px; padding: 24px; width: 100%; max-width: 420px; border: 1px solid #2a2a4e;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">📥</span>
+                    <p style="font-weight: 600; font-size: 18px; color: white;">Importar Base de Datos</p>
+                </div>
+                <button onclick="hideImportModal()" style="background: none; border: none; color: #888; cursor: pointer; padding: 4px; font-size: 24px; line-height: 1;">✕</button>
+            </div>
+            
+            <!-- Summary Section -->
+            <div style="background: #252540; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <p style="color: #aaa; font-size: 13px; margin-bottom: 12px;">Datos encontrados en el archivo:</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">📄</span>
+                        <div>
+                            <p style="color: #888; font-size: 11px;">Nóminas</p>
+                            <p id="import-count-nominas" style="color: white; font-weight: 600; font-size: 16px;">0</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">🏦</span>
+                        <div>
+                            <p style="color: #888; font-size: 11px;">Bancos</p>
+                            <p id="import-count-bancos" style="color: white; font-weight: 600; font-size: 16px;">0</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">💸</span>
+                        <div>
+                            <p style="color: #888; font-size: 11px;">Transacciones</p>
+                            <p id="import-count-transacciones" style="color: white; font-weight: 600; font-size: 16px;">0</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">💰</span>
+                        <div>
+                            <p style="color: #888; font-size: 11px;">Préstamos</p>
+                            <p id="import-count-prestamos" style="color: white; font-weight: 600; font-size: 16px;">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Option A: Replace -->
+            <button onclick="executeImport('replace')" style="width: 100%; padding: 16px; border-radius: 12px; font-size: 14px; cursor: pointer; background: #3b82f6; color: white; border: 2px solid #3b82f6; margin-bottom: 12px; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">🔄</span>
+                    <div>
+                        <p style="font-weight: 600; margin-bottom: 2px;">Reemplazar y Cargar Datos</p>
+                        <p style="font-size: 11px; opacity: 0.8;">✅ Recomendado - Sobrescribe TODOS los datos locales</p>
+                    </div>
+                </div>
+            </button>
+            
+            <!-- Option B: Merge -->
+            <button onclick="executeImport('merge')" style="width: 100%; padding: 16px; border-radius: 12px; font-size: 14px; cursor: pointer; background: transparent; color: #f59e0b; border: 2px solid #f59e0b; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">➕</span>
+                    <div>
+                        <p style="font-weight: 600; margin-bottom: 2px;">Añadir y Combinar Datos</p>
+                        <p style="font-size: 11px; opacity: 0.8;">⚠️ Riesgo de duplicados si los datos coinciden</p>
+                    </div>
+                </div>
+            </button>
+            
+            <!-- Cancel -->
+            <button onclick="hideImportModal()" style="width: 100%; padding: 14px; border-radius: 10px; font-size: 14px; cursor: pointer; background: transparent; color: #888; border: none; margin-top: 12px;">
+                Cancelar
             </button>
         </div>
     </div>
