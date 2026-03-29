@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v63
+// Version: 2025-07-28-v64
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -62,6 +62,11 @@ function showAppContent() {
     if (tabBar) tabBar.style.visibility = 'visible';
     const footer = document.querySelector('.author-footer');
     if (footer) footer.style.visibility = 'visible';
+    
+    // Actualizar widget de Extras después de mostrar contenido
+    setTimeout(() => {
+        updateExtrasDashboard();
+    }, 50);
 }
 
 function savePinSetup() {
@@ -327,6 +332,12 @@ document.addEventListener('DOMContentLoaded', () => {
     registerServiceWorker();
     setupEnterKeyNavigation();
     setupAutoSelectOnFocus();
+    
+    // Actualizar widget de Extras al final de toda la inicialización
+    // Usar setTimeout para asegurar que todos los selectores estén poblados
+    setTimeout(() => {
+        updateExtrasDashboard();
+    }, 100);
 });
 
 // ==================== SANITY CHECK - REMOVE DUPLICATES ====================
@@ -679,8 +690,9 @@ function switchTab(tab) {
     if (tab === 'gastos') updateExpensesList();
     if (tab === 'prestamos') updateLoansList();
     if (tab === 'extras') {
-        renderExtrasHistorial();
-        updateExtrasDashboard();
+        // Asegurar que el selector de año esté inicializado
+        initExtrasYearDropdown();
+        renderExtrasList();
     }
     if (tab === 'dashboard') {
         // Initialize selectors if not already done
@@ -1543,6 +1555,9 @@ function initDashboardSelectors() {
     
     // Force update dashboard with selected values (graceful handling of empty data)
     updateDashboard();
+    
+    // Actualizar widget de Extras para que coincida con el año del Dashboard
+    updateExtrasDashboard();
 }
 
 // Helper function to populate months for a specific year
@@ -3397,20 +3412,17 @@ function renderExtrasHistorial() {
 function updateExtrasDashboard() {
     const allExtras = getExtras() || [];
     
-    // Obtener el año seleccionado del Dashboard
+    // Obtener el año seleccionado del Dashboard directamente del selector
     const dashboardYearSelect = document.getElementById('dashboard-year');
+    let dashboardYear = new Date().getFullYear(); // Default al año actual
     
-    // Usar el año de sesión global, o el del selector si está disponible
-    let dashboardYear = sessionViewYear || new Date().getFullYear();
-    
+    // SIEMPRE usar el valor del selector si está disponible
     if (dashboardYearSelect && dashboardYearSelect.value) {
         const parsedYear = parseInt(dashboardYearSelect.value);
         if (!isNaN(parsedYear)) {
             dashboardYear = parsedYear;
         }
     }
-    
-    console.log('updateExtrasDashboard - filtering by year:', dashboardYear);
     
     // Filtrar por año del Dashboard
     const extras = allExtras.filter(extra => {
@@ -3448,11 +3460,9 @@ function initExtras() {
     // Inicializar selector de año
     initExtrasYearDropdown();
     
-    // Renderizar lista
+    // Renderizar lista (NO llamar updateExtrasDashboard aquí porque 
+    // initDashboardSelectors() ya lo hace después de poblar el selector)
     actualizarExtrasVista();
-    
-    // Actualizar widget del Dashboard
-    updateExtrasDashboard();
 }
 
 // ==================== SISTEMA DE ACTUALIZACIÓN PWA ====================
