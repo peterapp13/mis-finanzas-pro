@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v67
+// Version: 2025-07-28-v68
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -3438,12 +3438,13 @@ function renderExtrasHistorial() {
     actualizarExtrasVista();
 }
 
-// Actualizar widget de Extras en el Dashboard (usa anioDashboard)
+// Actualizar widget de Extras en el Dashboard
 function updateExtrasDashboard() {
     const allExtras = getExtras() || [];
     
-    // USAR anioDashboard (la variable interna del Dashboard)
-    const yearToFilter = anioDashboard;
+    // Leer el año DIRECTAMENTE del selector del Dashboard (igual que updateAnnualSummary)
+    const yearSelect = document.getElementById('dashboard-year');
+    const yearToFilter = yearSelect ? parseInt(yearSelect.value) : new Date().getFullYear();
     
     // Filtrar extras por año del Dashboard
     const extras = allExtras.filter(extra => {
