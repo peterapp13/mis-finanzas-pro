@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v61
+// Version: 2025-07-28-v62
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -3085,8 +3085,16 @@ function saveExtras(extras) {
 // Inicializar dropdown de años para Extras
 function initExtrasYearDropdown() {
     const yearSelect = document.getElementById('extras-year');
+    
     if (!yearSelect) {
-        console.error('Extras year select not found');
+        console.error('Extras year select not found - will retry');
+        // Reintentar después de un pequeño delay
+        setTimeout(initExtrasYearDropdown, 100);
+        return;
+    }
+    
+    // Si ya tiene opciones, no reinicializar
+    if (yearSelect.options.length > 0) {
         return;
     }
     
@@ -3100,14 +3108,17 @@ function initExtrasYearDropdown() {
     // Poblar años en orden descendente (más reciente primero)
     for (let year = endYear; year >= startYear; year--) {
         const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
+        option.value = year.toString();
+        option.textContent = year.toString();
         if (year === currentYear) option.selected = true;
         yearSelect.appendChild(option);
     }
     
-    // Actualizar la variable global
-    extrasSelectedYear = currentYear;
+    // Actualizar la variable global con el año de sesión
+    extrasSelectedYear = sessionViewYear || currentYear;
+    yearSelect.value = extrasSelectedYear.toString();
+    
+    console.log('Extras year dropdown initialized with', yearSelect.options.length, 'options');
 }
 
 // ==================== MODAL FUNCTIONS ====================
@@ -3368,11 +3379,18 @@ function updateExtrasDashboard() {
     
     // Obtener el año seleccionado del Dashboard
     const dashboardYearSelect = document.getElementById('dashboard-year');
-    let dashboardYear = new Date().getFullYear();
     
-    if (dashboardYearSelect && dashboardYearSelect.value && !isNaN(parseInt(dashboardYearSelect.value))) {
-        dashboardYear = parseInt(dashboardYearSelect.value);
+    // Usar el año de sesión global, o el del selector si está disponible
+    let dashboardYear = sessionViewYear || new Date().getFullYear();
+    
+    if (dashboardYearSelect && dashboardYearSelect.value) {
+        const parsedYear = parseInt(dashboardYearSelect.value);
+        if (!isNaN(parsedYear)) {
+            dashboardYear = parsedYear;
+        }
     }
+    
+    console.log('updateExtrasDashboard - filtering by year:', dashboardYear);
     
     // Filtrar por año del Dashboard
     const extras = allExtras.filter(extra => {
