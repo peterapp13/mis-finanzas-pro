@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v45
+// Version: 2025-07-28-v46
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -287,6 +287,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Security check first
     initSecurityCheck();
     
+    // Sanity check - remove duplicate payroll records
+    sanitizePayrollData();
+    
     initPayrollTable();
     initSSTable();
     loadSavedPercentages(); // Load saved percentages from localStorage
@@ -302,6 +305,45 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEnterKeyNavigation();
     setupAutoSelectOnFocus();
 });
+
+// ==================== SANITY CHECK - REMOVE DUPLICATES ====================
+function sanitizePayrollData() {
+    const data = getData();
+    if (!data || data.length === 0) return;
+    
+    const seen = new Map();
+    const uniqueData = [];
+    
+    // Keep only the most recent record for each month/year combination
+    data.forEach(record => {
+        const key = `${record.month}-${record.year}`;
+        const existing = seen.get(key);
+        
+        if (!existing) {
+            seen.set(key, record);
+            uniqueData.push(record);
+        } else {
+            // Keep the newer one (compare by createdAt or id)
+            const existingTime = new Date(existing.createdAt || existing.id).getTime();
+            const currentTime = new Date(record.createdAt || record.id).getTime();
+            
+            if (currentTime > existingTime) {
+                // Replace with newer record
+                const idx = uniqueData.indexOf(existing);
+                if (idx !== -1) {
+                    uniqueData[idx] = record;
+                    seen.set(key, record);
+                }
+            }
+        }
+    });
+    
+    // Only save if we removed duplicates
+    if (uniqueData.length < data.length) {
+        console.log(`Sanity Check: Removed ${data.length - uniqueData.length} duplicate payroll records`);
+        saveData(uniqueData);
+    }
+}
 
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
@@ -671,11 +713,22 @@ function savePayroll() {
         createdAt: new Date().toISOString()
     };
     
+    // UPSERT: Check if record for this month/year already exists
     const data = getData();
-    data.push(record);
-    saveData(data);
+    const existingIndex = data.findIndex(r => r.month === selectedMonth && r.year === selectedYear);
     
-    alert(`Nómina de ${months[selectedMonth - 1]} ${selectedYear} archivada correctamente`);
+    if (existingIndex !== -1) {
+        // Update existing record (keep same id for consistency)
+        record.id = data[existingIndex].id;
+        data[existingIndex] = record;
+        alert(`Nómina de ${months[selectedMonth - 1]} ${selectedYear} actualizada correctamente`);
+    } else {
+        // Add new record
+        data.push(record);
+        alert(`Nómina de ${months[selectedMonth - 1]} ${selectedYear} archivada correctamente`);
+    }
+    
+    saveData(data);
     resetForm();
     updateTransfers();
     updateStats();
