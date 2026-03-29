@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v46
+// Version: 2025-07-28-v47
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2171,9 +2171,15 @@ function updateChart(yearData) {
 function deleteRecord(id) {
     if (confirm('¿Estás seguro de que deseas eliminar este registro?')) {
         let data = getData();
+        const originalLength = data.length;
         data = data.filter(r => r.id !== id);
-        saveData(data);
-        updateStats();
+        
+        if (data.length < originalLength) {
+            saveData(data);
+            // Re-render history table and update dashboard stats
+            updateStats();
+            console.log(`Record ${id} deleted. Records: ${originalLength} -> ${data.length}`);
+        }
     }
 }
 
