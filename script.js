@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v54
+// Version: 2025-07-28-v55
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1808,88 +1808,110 @@ function updateBankBreakdown() {
 }
 
 // ==================== IRPF CALCULATOR - ARAGÓN 2025 ====================
-// Cálculo CORREGIDO con coeficiente ajustado para coincidir con AEAT
-// Para 18.432,45€ bruto → Cuota real = 1.236,23€
+// Fórmulas OFICIALES según AEAT y Real Decreto-ley 4/2024
+// Tramos Aragón 2025 + Reducción por Rendimientos del Trabajo Art. 20 LIRPF
 
-// Aragón 2025 IRPF Tax Brackets (State + Autonomous combined)
-// Tipos totales (estatal + autonómico)
-const ARAGON_2025_BRACKETS = [
-    { limit: 12450, rate: 0.19 },    // 19% total
-    { limit: 20200, rate: 0.24 },    // 24% total
-    { limit: 35200, rate: 0.30 },    // 30% total
-    { limit: 60000, rate: 0.37 },    // 37% total
-    { limit: 300000, rate: 0.45 }    // 45% total
+// TRAMOS ESTATALES 2025 (porcentajes)
+const TRAMOS_ESTATALES = [
+    { limite: 12450, tipo: 0.095 },
+    { limite: 20200, tipo: 0.12 },
+    { limite: 35200, tipo: 0.15 },
+    { limite: 60000, tipo: 0.185 },
+    { limite: 300000, tipo: 0.225 }
 ];
 
-// Constants for 2025 - Aragón
-const GASTOS_DEDUCIBLES = 2000;      // Otros gastos deducibles
-const MINIMO_PERSONAL = 5550;        // Mínimo personal (soltero, sin hijos)
-const COTIZACION_SS_PERCENT = 6.35;  // Cotización SS trabajador
+// TRAMOS AUTONÓMICOS ARAGÓN 2025
+const TRAMOS_ARAGON = [
+    { limite: 13072.50, tipo: 0.095 },
+    { limite: 21210, tipo: 0.12 },
+    { limite: 36960, tipo: 0.15 },
+    { limite: 52500, tipo: 0.185 },
+    { limite: 60000, tipo: 0.205 },
+    { limite: 80000, tipo: 0.23 },
+    { limite: 90000, tipo: 0.24 },
+    { limite: 130000, tipo: 0.25 }
+];
 
-// Reducción por rendimientos del trabajo (AJUSTADA al borrador AEAT 2025)
-// Coeficiente calibrado para que 18.432,45€ bruto → 1.236,23€ cuota → +137€ a pagar
+// Constants for 2025
+const GASTOS_DEDUCIBLES = 2000;      // Art. 19.2.f LIRPF
+const MINIMO_PERSONAL = 5550;        // Mínimo personal (soltero, sin hijos)
+const COTIZACION_SS_PERCENT = 6.35;
+
+// Reducción por rendimientos del trabajo (Art. 20 LIRPF - RDL 4/2024)
+// FÓRMULAS OFICIALES 2025:
+// ≤ 14.852€: 7.302€
+// 14.852,01 - 17.673,52€: 7.302 - 1,75 × (RNT - 14.852)
+// 17.673,52 - 19.747,50€: 2.364,34 - 1,14 × (RNT - 17.673,52)
+// > 19.747,50€: 0€
 function calcularReduccionRendimientos(rendimientoNeto) {
     if (rendimientoNeto <= 0) return 0;
     
-    // Para rendimientos <= 14.047,50 €: reducción máxima
-    if (rendimientoNeto <= 14047.50) {
-        return 6498;
+    if (rendimientoNeto <= 14852) {
+        return 7302;
     }
     
-    // Para rendimientos entre 14.047,50 € y 19.747,50 €
-    // Fórmula calibrada: 6.498 - 2,8493 × (Rendimiento Neto - 14.047,50)
+    if (rendimientoNeto <= 17673.52) {
+        return Math.max(0, 7302 - (1.75 * (rendimientoNeto - 14852)));
+    }
+    
     if (rendimientoNeto <= 19747.50) {
-        const reduccion = 6498 - (2.8493 * (rendimientoNeto - 14047.50));
-        return Math.max(0, reduccion);
+        return Math.max(0, 2364.34 - (1.14 * (rendimientoNeto - 17673.52)));
     }
     
-    // Sin reducción para rendimientos > 19.747,50 €
     return 0;
 }
 
-// Calculate IRPF using Aragón 2025 progressive brackets
-function calcularCuotaIRPF(baseLiquidable) {
-    if (baseLiquidable <= 0) return 0;
+// Calcular cuota por tramos
+function calcularCuotaPorTramos(base, tramos) {
+    if (base <= 0) return 0;
     
     let cuota = 0;
-    let previousLimit = 0;
+    let limiteAnterior = 0;
     
-    for (const bracket of ARAGON_2025_BRACKETS) {
-        if (baseLiquidable <= previousLimit) break;
+    for (const tramo of tramos) {
+        if (base <= limiteAnterior) break;
         
-        const taxableInBracket = Math.min(baseLiquidable, bracket.limit) - previousLimit;
-        if (taxableInBracket > 0) {
-            cuota += taxableInBracket * bracket.rate;
+        const baseEnTramo = Math.min(base, tramo.limite) - limiteAnterior;
+        if (baseEnTramo > 0) {
+            cuota += baseEnTramo * tramo.tipo;
         }
-        previousLimit = bracket.limit;
+        limiteAnterior = tramo.limite;
     }
     
-    // For income above €300,000
-    if (baseLiquidable > 300000) {
-        cuota += (baseLiquidable - 300000) * 0.47;
+    // Último tramo (sin límite superior)
+    const ultimoLimite = tramos[tramos.length - 1].limite;
+    if (base > ultimoLimite) {
+        cuota += (base - ultimoLimite) * 0.255; // Aragón: 25.5% para > 130.000€
     }
     
     return cuota;
 }
 
-// Función para calcular la cuota EXACTA según datos reales
+// Calcular cuota IRPF total (Estatal + Autonómica)
+function calcularCuotaIRPF(baseLiquidable) {
+    const cuotaEstatal = calcularCuotaPorTramos(baseLiquidable, TRAMOS_ESTATALES);
+    const cuotaAutonomica = calcularCuotaPorTramos(baseLiquidable, TRAMOS_ARAGON);
+    return cuotaEstatal + cuotaAutonomica;
+}
+
+// Función principal para calcular la cuota real
 function calcularCuotaRealAragon(brutoAnual, ssAnual) {
     // Paso 1: Rendimiento Neto del Trabajo
     const rendimientoNeto = brutoAnual - ssAnual - GASTOS_DEDUCIBLES;
     
-    // Paso 2: Reducción por rendimientos del trabajo (fórmula corregida)
+    // Paso 2: Reducción por rendimientos del trabajo (Art. 20 LIRPF)
     const reduccion = calcularReduccionRendimientos(rendimientoNeto);
     
     // Paso 3: Base Liquidable General
     const baseLiquidableGeneral = Math.max(0, rendimientoNeto - reduccion);
     
-    // Paso 4: Cuota Íntegra (tramos sobre base liquidable)
+    // Paso 4: Cuota Íntegra (Estatal + Autonómica)
     const cuotaIntegra = calcularCuotaIRPF(baseLiquidableGeneral);
     
     // Paso 5: Cuota del mínimo personal
     const cuotaMinimo = calcularCuotaIRPF(MINIMO_PERSONAL);
     
-    // Paso 6: Cuota Líquida = Cuota Íntegra - Cuota Mínimo
+    // Paso 6: Cuota Líquida
     const cuotaLiquida = Math.max(0, cuotaIntegra - cuotaMinimo);
     
     return {
