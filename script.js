@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v50
+// Version: 2025-07-28-v51
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2018,15 +2018,26 @@ function updateAnnualSummary() {
         }
     }
     
-    // Calculate Base Liquidable (taxable base)
-    const DEDUCCION_MINIMA = 7550;
-    let baseLiquidable = calcBruto - DEDUCCION_MINIMA - calcSS;
-    if (baseLiquidable < 0) baseLiquidable = 0;
+    // ==================== CÁLCULO IRPF ARAGÓN 2025 (CORRECTO) ====================
+    // Paso 1: Rendimiento Neto del Trabajo
+    const rendimientoNeto = calcBruto - calcSS - GASTOS_DEDUCIBLES;
     
-    // Calculate Legal IRPF from Base Liquidable
-    const irpfLegalTotal = calculateIRPFLegal(baseLiquidable);
+    // Paso 2: Reducción por Rendimientos del Trabajo (Fórmula Oficial)
+    const reduccionTrabajo = calcularReduccionRendimientos(rendimientoNeto);
     
-    // Calculate Tax Return Result
+    // Paso 3: Base Liquidable General
+    const baseLiquidable = Math.max(0, rendimientoNeto - reduccionTrabajo);
+    
+    // Paso 4: Cuota Íntegra (aplicando tramos Aragón 2025)
+    const cuotaIntegraSinMinimo = calcularCuotaIRPF(baseLiquidable);
+    
+    // Paso 5: Cuota correspondiente al Mínimo Personal (5.550€)
+    const cuotaMinimo = calcularCuotaIRPF(Math.min(MINIMO_PERSONAL, baseLiquidable));
+    
+    // Paso 6: Cuota Líquida (lo que realmente se debe pagar)
+    const irpfLegalTotal = Math.max(0, cuotaIntegraSinMinimo - cuotaMinimo);
+    
+    // Calculate Tax Return Result (Previsión Renta)
     const resultadoRenta = irpfLegalTotal - calcRetenido;
     
     // Update IRPF Retenido (accumulated as main, projection as subtext)
@@ -2042,7 +2053,7 @@ function updateAnnualSummary() {
         }
     }
     
-    // Update IRPF Legal Total
+    // Update IRPF Legal Total (Cuota Líquida Real)
     document.getElementById('dashboard-annual-irpf-legal').textContent = formatCurrency(irpfLegalTotal);
     
     const irpfLegalLabel = document.getElementById('dashboard-irpf-legal-label');
