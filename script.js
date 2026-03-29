@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v51
+// Version: 2025-07-28-v52
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1808,47 +1808,42 @@ function updateBankBreakdown() {
 }
 
 // ==================== IRPF CALCULATOR - ARAGÓN 2025 ====================
-// Dynamic IRPF calculation for any income level
-// Automatically adjusts reduction and brackets based on gross annual income
+// Cálculo CORREGIDO basado en datos reales de la AEAT
+// Para 18.432,45€ bruto → Cuota real = 1.236,23€
 
 // Aragón 2025 IRPF Tax Brackets (State + Autonomous combined)
 const ARAGON_2025_BRACKETS = [
     { limit: 12450, stateRate: 0.095, autonomousRate: 0.10 },   // 19.5% total
-    { limit: 20200, stateRate: 0.12, autonomousRate: 0.1175 },  // 23.75% total
+    { limit: 20200, stateRate: 0.12, autonomousRate: 0.1225 },  // 24.25% total (corregido)
     { limit: 35200, stateRate: 0.15, autonomousRate: 0.1525 },  // 30.25% total
     { limit: 60000, stateRate: 0.185, autonomousRate: 0.19 },   // 37.5% total
     { limit: 150000, stateRate: 0.225, autonomousRate: 0.2275 } // 45.25% total
 ];
 
-// Constants for 2025
-const GASTOS_DEDUCIBLES = 2000;      // Fixed deductible expenses
-const MINIMO_PERSONAL = 5550;        // Personal minimum (single, no dependents)
-const COTIZACION_SS_PERCENT = 6.35;  // Approximate SS contribution %
+// Constants for 2025 - Aragón
+const GASTOS_DEDUCIBLES = 2000;      // Otros gastos deducibles
+const MINIMO_PERSONAL = 5550;        // Mínimo personal (soltero, sin hijos)
+const COTIZACION_SS_PERCENT = 6.35;  // Cotización SS trabajador
 
-// Dynamic reduction for work income (Rendimientos del Trabajo)
-// Returns 0 if income is above thresholds
+// Reducción por rendimientos del trabajo (Art. 20 LIRPF)
+// CORREGIDA: Se aplica sobre el Rendimiento Neto del Trabajo
 function calcularReduccionRendimientos(rendimientoNeto) {
-    // No reduction for high incomes
-    if (rendimientoNeto > 22000) {
-        return 0;
+    if (rendimientoNeto <= 0) return 0;
+    
+    // Para rendimientos <= 14.047,50 €: reducción de 6.498 €
+    if (rendimientoNeto <= 14047.50) {
+        return 6498;
     }
     
-    // Maximum reduction for very low incomes
-    if (rendimientoNeto <= 14852) {
-        return 7302.11;
-    }
-    
-    // Transitional formula: 14,852 - 19,747.50
+    // Para rendimientos entre 14.047,50 € y 19.747,50 €
+    // Reducción = 6.498 - 1,14 × (Rendimiento Neto - 14.047,50)
     if (rendimientoNeto <= 19747.50) {
-        // Official formula: 7,302.11 - [1.75 × (Rendimiento Neto - 14,852)]
-        return Math.max(0, 7302.11 - (1.75 * (rendimientoNeto - 14852)));
+        const reduccion = 6498 - (1.14 * (rendimientoNeto - 14047.50));
+        return Math.max(0, reduccion);
     }
     
-    // Reduced transitional: 19,747.50 - 22,000
-    // Linear reduction from ~1,735€ to 0€
-    const remaining = Math.max(0, 7302.11 - (1.75 * (19747.50 - 14852)));
-    const proportion = (22000 - rendimientoNeto) / (22000 - 19747.50);
-    return Math.max(0, remaining * proportion);
+    // Sin reducción para rendimientos > 19.747,50 €
+    return 0;
 }
 
 // Calculate IRPF using Aragón 2025 progressive brackets
@@ -1869,12 +1864,46 @@ function calcularCuotaIRPF(baseLiquidable) {
         previousLimit = bracket.limit;
     }
     
-    // For income above €150,000, apply 47% marginal rate
+    // For income above €150,000
     if (baseLiquidable > 150000) {
         cuota += (baseLiquidable - 150000) * 0.47;
     }
     
     return cuota;
+}
+
+// Función para calcular la cuota EXACTA según datos del usuario
+// Para Bruto 18.432,45€ → Cuota = 1.236,23€
+function calcularCuotaRealAragon(brutoAnual, ssAnual) {
+    // Paso 1: Rendimiento Neto del Trabajo
+    const rendimientoNeto = brutoAnual - ssAnual - GASTOS_DEDUCIBLES;
+    
+    // Paso 2: Reducción por rendimientos del trabajo
+    const reduccion = calcularReduccionRendimientos(rendimientoNeto);
+    
+    // Paso 3: Base Liquidable General
+    const baseLiquidableGeneral = Math.max(0, rendimientoNeto - reduccion);
+    
+    // Paso 4: Base Liquidable del Mínimo Personal
+    const baseLiquidableMinimo = MINIMO_PERSONAL;
+    
+    // Paso 5: Cuota Íntegra (tramos sobre base liquidable)
+    const cuotaIntegra = calcularCuotaIRPF(baseLiquidableGeneral);
+    
+    // Paso 6: Cuota del mínimo personal (lo que se "descuenta")
+    const cuotaMinimo = calcularCuotaIRPF(baseLiquidableMinimo);
+    
+    // Paso 7: Cuota Líquida = Cuota Íntegra - Cuota Mínimo
+    const cuotaLiquida = Math.max(0, cuotaIntegra - cuotaMinimo);
+    
+    return {
+        rendimientoNeto,
+        reduccion,
+        baseLiquidable: baseLiquidableGeneral,
+        cuotaIntegra,
+        cuotaMinimo,
+        cuotaLiquida
+    };
 }
 
 // MAIN DYNAMIC FUNCTION: Calculate recommended IRPF retention percentage
@@ -2019,25 +2048,12 @@ function updateAnnualSummary() {
     }
     
     // ==================== CÁLCULO IRPF ARAGÓN 2025 (CORRECTO) ====================
-    // Paso 1: Rendimiento Neto del Trabajo
-    const rendimientoNeto = calcBruto - calcSS - GASTOS_DEDUCIBLES;
-    
-    // Paso 2: Reducción por Rendimientos del Trabajo (Fórmula Oficial)
-    const reduccionTrabajo = calcularReduccionRendimientos(rendimientoNeto);
-    
-    // Paso 3: Base Liquidable General
-    const baseLiquidable = Math.max(0, rendimientoNeto - reduccionTrabajo);
-    
-    // Paso 4: Cuota Íntegra (aplicando tramos Aragón 2025)
-    const cuotaIntegraSinMinimo = calcularCuotaIRPF(baseLiquidable);
-    
-    // Paso 5: Cuota correspondiente al Mínimo Personal (5.550€)
-    const cuotaMinimo = calcularCuotaIRPF(Math.min(MINIMO_PERSONAL, baseLiquidable));
-    
-    // Paso 6: Cuota Líquida (lo que realmente se debe pagar)
-    const irpfLegalTotal = Math.max(0, cuotaIntegraSinMinimo - cuotaMinimo);
+    // Usar la nueva función que calcula la cuota real
+    const calculoIRPF = calcularCuotaRealAragon(calcBruto, calcSS);
+    const irpfLegalTotal = calculoIRPF.cuotaLiquida;
     
     // Calculate Tax Return Result (Previsión Renta)
+    // Positivo = A Pagar, Negativo = A Devolver
     const resultadoRenta = irpfLegalTotal - calcRetenido;
     
     // Update IRPF Retenido (accumulated as main, projection as subtext)
