@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v80
+// Version: 2025-07-28-v81
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2017,20 +2017,23 @@ function updateBalanceVerification() {
     const netIncomeText = document.getElementById('dashboard-net-income').textContent || '0';
     const liquidoNomina = parseFloat(netIncomeText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
     
-    // Obtener el fondo de ahorro
-    const savingsBalance = getSavingsFund() || 0;
-    
-    // Calcular dinero disponible (de la regla 50/30/20)
-    const disponibleText = document.getElementById('rule-20-status');
-    let disponible = 0;
-    if (disponibleText && disponibleText.textContent.includes('libre')) {
-        const match = disponibleText.textContent.match(/([\d.,]+)/);
-        if (match) {
-            disponible = parseFloat(match[1].replace('.', '').replace(',', '.')) || 0;
-        }
+    // Obtener el OBJETIVO de ahorro (20% del líquido)
+    const ahorroTargetEl = document.getElementById('rule-ahorro-target');
+    let ahorro = 0;
+    if (ahorroTargetEl) {
+        const ahorroText = ahorroTargetEl.textContent || '0';
+        ahorro = parseFloat(ahorroText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
     }
     
-    // Calcular total de transferencias a bancos
+    // Obtener el dinero disponible del widget morado
+    const disponibleEl = document.getElementById('dashboard-available-money');
+    let disponible = 0;
+    if (disponibleEl) {
+        const disponibleText = disponibleEl.textContent || '0';
+        disponible = parseFloat(disponibleText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+    }
+    
+    // Calcular total de bancos desde los datos (mismo cálculo que updateBankBreakdown)
     const banks = getBanks() || [];
     const expenses = getExpenses() || [];
     const loans = getLoans() || [];
@@ -2038,21 +2041,25 @@ function updateBalanceVerification() {
     let totalBancos = 0;
     banks.forEach(bank => {
         const bankExpenses = expenses.filter(e => e.bankId === bank.id);
-        const bankLoans = loans.filter(l => l.bankId === bank.id);
+        const bankLoans = loans.filter(l => l.bankId === bank.id && !l.paidOff);
         
-        let bankTotal = 0;
-        bankExpenses.forEach(exp => {
-            bankTotal += parseFloat(exp.amount) || 0;
-        });
-        bankLoans.forEach(loan => {
-            bankTotal += parseFloat(loan.monthlyPayment) || 0;
+        // Sumar gastos
+        bankExpenses.forEach(e => {
+            const monthly = e.frequency === 'anual' ? e.amount / 12 : e.amount;
+            totalBancos += monthly;
         });
         
-        totalBancos += bankTotal;
+        // Sumar préstamos activos
+        bankLoans.forEach(l => {
+            const status = calculateLoanStatus(l);
+            if (status.remainingInstallments > 0) {
+                totalBancos += l.payment;
+            }
+        });
     });
     
     // Calcular total distribuido
-    const totalDistribuido = savingsBalance + disponible + totalBancos;
+    const totalDistribuido = ahorro + disponible + totalBancos;
     
     // Calcular diferencia
     const diferencia = totalDistribuido - liquidoNomina;
@@ -2066,7 +2073,7 @@ function updateBalanceVerification() {
     const verifyDiferencia = document.getElementById('verify-diferencia');
     const verifyDiferenciaContainer = document.getElementById('verify-diferencia-container');
     
-    if (verifyAhorro) verifyAhorro.textContent = formatCurrency(savingsBalance);
+    if (verifyAhorro) verifyAhorro.textContent = formatCurrency(ahorro);
     if (verifyDisponible) verifyDisponible.textContent = formatCurrency(disponible);
     if (verifyBancos) verifyBancos.textContent = formatCurrency(totalBancos);
     if (verifyTotalDistribuido) verifyTotalDistribuido.textContent = formatCurrency(totalDistribuido);
