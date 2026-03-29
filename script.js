@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v77
+// Version: 2025-07-28-v78
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1793,20 +1793,30 @@ function updateDashboard() {
     
     const data = getData() || []; // Graceful fallback: array vacío si no hay datos
     const selectedValue = monthSelect.value;
+    const selectedYear = parseInt(yearSelect.value) || new Date().getFullYear();
     
     // Get net income for selected period
     let netIncome = 0;
     let periodLabel = 'Sin datos';
     
     if (selectedValue === 'current') {
-        // Get from current payroll form - parse the formatted currency
-        const netoElement = document.getElementById('total-neto');
-        if (netoElement) {
-            const netoText = netoElement.textContent || '0';
-            // Remove currency formatting: "1.234,56 €" -> 1234.56
-            netIncome = parseFloat(netoText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+        // Buscar la nómina más reciente del año seleccionado
+        const yearRecords = data.filter(r => r.year === selectedYear);
+        if (yearRecords.length > 0) {
+            // Ordenar por mes descendente y tomar la más reciente
+            yearRecords.sort((a, b) => b.month - a.month);
+            const latestRecord = yearRecords[0];
+            netIncome = latestRecord.totalNeto || 0;
+            periodLabel = `${months[latestRecord.month - 1]} ${latestRecord.year}`;
+        } else {
+            // Si no hay nóminas del año, intentar leer del formulario actual
+            const netoElement = document.getElementById('total-neto');
+            if (netoElement) {
+                const netoText = netoElement.textContent || '0';
+                netIncome = parseFloat(netoText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+            }
+            periodLabel = 'Nómina Actual';
         }
-        periodLabel = 'Nómina Actual';
     } else if (selectedValue === 'empty' || !selectedValue) {
         // Graceful handling cuando no hay valor o es vacío
         netIncome = 0;
