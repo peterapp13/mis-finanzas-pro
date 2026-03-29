@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v75
+// Version: 2025-07-28-v77
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -398,6 +398,11 @@ function precargarValoresNomina() {
             totalEl.textContent = abonar.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
     });
+    
+    // Calcular Total Bruto después de precargar todos los valores
+    setTimeout(() => {
+        calculateTotals();
+    }, 50);
 }
 
 let selectedMonth = new Date().getMonth() + 1;
