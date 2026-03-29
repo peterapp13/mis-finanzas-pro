@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v74
+// Version: 2025-07-28-v75
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -372,6 +372,8 @@ function precargarValoresNomina() {
         const config = VALORES_PRECARGA[conceptId];
         const unidadInput = document.getElementById(`${conceptId}_unidad`);
         const precioInput = document.getElementById(`${conceptId}_precio`);
+        const abonarEl = document.getElementById(`${conceptId}_abonar`);
+        const totalEl = document.getElementById(`${conceptId}_total`);
         
         if (unidadInput) {
             unidadInput.value = config.unidad;
@@ -387,8 +389,14 @@ function precargarValoresNomina() {
             }
         }
         
-        // Recalcular la fila
-        calculateRow(conceptId);
+        // Calcular abonar y total directamente (sin llamar a calculateRow para evitar errores)
+        if (unidadInput && precioInput && abonarEl && totalEl) {
+            const unidad = parseFloat(unidadInput.value) || 0;
+            const precio = parseFloat(precioInput.value) || 0;
+            const abonar = unidad * precio;
+            abonarEl.textContent = abonar.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            totalEl.textContent = abonar.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
     });
 }
 
