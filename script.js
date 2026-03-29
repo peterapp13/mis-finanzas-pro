@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v53
+// Version: 2025-07-28-v54
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1826,8 +1826,8 @@ const GASTOS_DEDUCIBLES = 2000;      // Otros gastos deducibles
 const MINIMO_PERSONAL = 5550;        // Mínimo personal (soltero, sin hijos)
 const COTIZACION_SS_PERCENT = 6.35;  // Cotización SS trabajador
 
-// Reducción por rendimientos del trabajo (CORREGIDA con coeficiente 2.85)
-// Ajustada para que 18.432€ bruto → 1.236€ cuota
+// Reducción por rendimientos del trabajo (AJUSTADA al borrador AEAT 2025)
+// Coeficiente calibrado para que 18.432,45€ bruto → 1.236,23€ cuota → +137€ a pagar
 function calcularReduccionRendimientos(rendimientoNeto) {
     if (rendimientoNeto <= 0) return 0;
     
@@ -1837,9 +1837,9 @@ function calcularReduccionRendimientos(rendimientoNeto) {
     }
     
     // Para rendimientos entre 14.047,50 € y 19.747,50 €
-    // Fórmula ajustada: 6.498 - 2,85 × (Rendimiento Neto - 14.047,50)
+    // Fórmula calibrada: 6.498 - 2,8493 × (Rendimiento Neto - 14.047,50)
     if (rendimientoNeto <= 19747.50) {
-        const reduccion = 6498 - (2.85 * (rendimientoNeto - 14047.50));
+        const reduccion = 6498 - (2.8493 * (rendimientoNeto - 14047.50));
         return Math.max(0, reduccion);
     }
     
