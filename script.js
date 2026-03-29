@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v69
+// Version: 2025-07-28-v70
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -10,15 +10,9 @@ const PIN_KEY = 'app_security_pin';
 const LAST_UPDATE_KEY = 'finanzas_last_update';
 const EXTRAS_STORAGE_KEY = 'mis-finanzas-extras';
 
-// ==================== ESTADO GLOBAL Y VARIABLES DE TABS ====================
-// Variable global inicial - solo se usa para inicializar los tabs al entrar con PIN
+// ==================== ESTADO GLOBAL (SINGLE SOURCE OF TRUTH) ====================
+// Esta es la ÚNICA variable que controla el año activo en TODA la aplicación
 let anioGlobalActivo = new Date().getFullYear();
-
-// Variables INTERNAS de cada tab (independientes después de la inicialización)
-let anioDashboard = new Date().getFullYear();  // Año interno del Dashboard
-let anioExtras = new Date().getFullYear();      // Año interno del tab Extras
-let anioHistorial = new Date().getFullYear();   // Año interno del tab Historial
-let anioStats = new Date().getFullYear();       // Año interno del tab Estadísticas
 
 // ==================== PIN SECURITY SYSTEM ====================
 let currentPinInput = '';
@@ -144,16 +138,10 @@ function verifyPin() {
         showAppContent();
         currentPinInput = '';
         
-        // Inicializar año global al año actual
+        // Inicializar año global al año actual (Single Source of Truth)
         anioGlobalActivo = new Date().getFullYear();
         
-        // Inicializar TODAS las variables internas de cada tab con el año global
-        anioDashboard = anioGlobalActivo;
-        anioExtras = anioGlobalActivo;
-        anioHistorial = anioGlobalActivo;
-        anioStats = anioGlobalActivo;
-        
-        // Sincronizar todos los selectores con el año global (solo una vez al iniciar)
+        // Sincronizar todos los selectores con el año global
         syncAllYearSelectors();
     } else {
         // Wrong PIN
@@ -1581,19 +1569,19 @@ function initDashboardSelectors() {
     
     const currentYear = new Date().getFullYear();
     
-    // SIEMPRE inicializar con el año actual
-    populateYearDropdown(yearSelect, currentYear);
+    // Inicializar anioGlobalActivo con el año actual
+    anioGlobalActivo = currentYear;
     
-    // IMPORTANTE: Sincronizar variable interna anioDashboard con el selector
-    anioDashboard = currentYear;
+    // Poblar el selector de años y seleccionar el actual
+    populateYearDropdown(yearSelect, anioGlobalActivo);
     
-    // Populate months for current year
-    updateDashboardMonthsForYear(currentYear);
+    // Poblar los meses del año global
+    updateDashboardMonthsForYear(anioGlobalActivo);
     
-    // Force update dashboard with selected values (graceful handling of empty data)
+    // Actualizar Dashboard (usa anioGlobalActivo)
     updateDashboard();
     
-    // Actualizar widget de Extras para que coincida con el año del Dashboard
+    // Actualizar widget de Extras (usa anioGlobalActivo)
     updateExtrasDashboard();
 }
 
@@ -1660,21 +1648,23 @@ function onDashboardUpdateClick() {
     const yearSelect = document.getElementById('dashboard-year');
     const selectedYear = parseInt(yearSelect.value);
     
-    // Actualizar SOLO la variable interna del Dashboard (NO afecta a otros tabs)
-    anioDashboard = selectedYear;
+    // Actualizar la variable GLOBAL (Single Source of Truth)
+    anioGlobalActivo = selectedYear;
     
-    try {
-        // Primero actualiza las opciones del mes según el año seleccionado
-        updateDashboardMonthsForYear(selectedYear);
-        
-        // Luego actualiza todo el Dashboard
-        updateDashboard();
-    } catch (e) {
-        console.error('Error en updateDashboard:', e);
-    }
+    // Actualizar las opciones del mes según el año seleccionado
+    updateDashboardMonthsForYear(anioGlobalActivo);
     
-    // SIEMPRE actualizar el widget de Extras (independiente de errores anteriores)
+    // Actualizar todo el Dashboard (usa anioGlobalActivo internamente)
+    updateDashboard();
+    
+    // Actualizar el widget de Extras (usa anioGlobalActivo)
     updateExtrasDashboard();
+    
+    // Sincronizar el selector de Extras si existe
+    const extrasYearSelect = document.getElementById('extras-year');
+    if (extrasYearSelect) {
+        extrasYearSelect.value = anioGlobalActivo.toString();
+    }
 }
 
 // LEGACY: Mantener por compatibilidad pero ya no se usa con onchange
@@ -2252,6 +2242,9 @@ function updateSavingsFundDisplay() {
     // Update history
     const history = getSavingsHistory();
     const container = document.getElementById('savings-fund-history');
+    
+    // Protección contra null
+    if (!container) return;
     
     if (history.length === 0) {
         container.innerHTML = '<p style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 12px;">Sin movimientos</p>';
@@ -3124,12 +3117,25 @@ const IRPF_CAPITAL = 0.19; // 19% fijo para rendimientos del capital mobiliario
 // Obtener extras del localStorage
 function getExtras() {
     const data = localStorage.getItem(EXTRAS_STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    
+    const parsed = JSON.parse(data);
+    // GARANTIZAR que siempre sea un Array (corrige bug si se guardó como Object)
+    if (Array.isArray(parsed)) {
+        return parsed;
+    }
+    // Si por error se guardó como Object, convertir a Array
+    if (parsed && typeof parsed === 'object') {
+        return Object.values(parsed);
+    }
+    return [];
 }
 
-// Guardar extras en localStorage
+// Guardar extras en localStorage (SIEMPRE como Array)
 function saveExtras(extras) {
-    localStorage.setItem(EXTRAS_STORAGE_KEY, JSON.stringify(extras));
+    // Asegurar que siempre se guarde como Array
+    const dataToSave = Array.isArray(extras) ? extras : [];
+    localStorage.setItem(EXTRAS_STORAGE_KEY, JSON.stringify(dataToSave));
 }
 
 // Inicializar dropdown de años para Extras
@@ -3138,17 +3144,15 @@ function initExtrasYearDropdown() {
     
     if (!yearSelect) {
         console.error('Extras year select not found - will retry');
-        // Reintentar después de un pequeño delay
         setTimeout(initExtrasYearDropdown, 100);
         return;
     }
     
-    const currentYear = new Date().getFullYear();
     const baseStartYear = 2020;
     const baseEndYear = 2045;
     
     // Obtener años de los datos existentes
-    const allExtras = getExtras() || [];
+    const allExtras = getExtras();
     const dataYears = new Set();
     
     allExtras.forEach(extra => {
@@ -3180,12 +3184,11 @@ function initExtrasYearDropdown() {
         const option = document.createElement('option');
         option.value = year.toString();
         option.textContent = year.toString();
-        if (year === currentYear) option.selected = true;
         yearSelect.appendChild(option);
     });
     
-    // Sincronizar con la variable interna anioExtras
-    yearSelect.value = anioExtras.toString();
+    // Sincronizar con anioGlobalActivo (Single Source of Truth)
+    yearSelect.value = anioGlobalActivo.toString();
     
     console.log('Extras year dropdown initialized with', yearSelect.options.length, 'options');
 }
@@ -3338,18 +3341,24 @@ function eliminarExtra(id) {
 
 // Actualizar vista de Extras (llamado por botón "Actualizar" de Extras)
 function actualizarExtrasVista() {
-    // Leer el año del selector de Extras y actualizar SOLO anioExtras (independiente)
+    // Leer el año del selector de Extras y actualizar anioGlobalActivo
     const yearSelect = document.getElementById('extras-year');
     
     if (yearSelect && yearSelect.value) {
-        anioExtras = parseInt(yearSelect.value) || new Date().getFullYear();
+        anioGlobalActivo = parseInt(yearSelect.value) || new Date().getFullYear();
     }
     
-    // NO sincronizar con otros tabs - cada tab es independiente
+    // Sincronizar el selector del Dashboard
+    const dashboardYearSelect = document.getElementById('dashboard-year');
+    if (dashboardYearSelect) {
+        dashboardYearSelect.value = anioGlobalActivo.toString();
+    }
+    
+    // Renderizar con el año global
     renderExtrasList();
 }
 
-// Renderizar lista de extras (usa anioExtras - variable interna del tab)
+// Renderizar lista de extras (usa anioGlobalActivo - Single Source of Truth)
 function renderExtrasList() {
     const container = document.getElementById('extras-list');
     const summaryYear = document.getElementById('extras-summary-year');
@@ -3360,20 +3369,17 @@ function renderExtrasList() {
     
     if (!container) return;
     
-    const allExtras = getExtras() || [];
+    const allExtras = getExtras();
     
-    // USAR anioExtras (variable interna del tab Extras)
-    const yearToFilter = anioExtras;
-    
-    // Filtrar por año del tab Extras
+    // Filtrar por anioGlobalActivo (Single Source of Truth)
     const extras = allExtras.filter(extra => {
         if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
-        return extraYear === yearToFilter;
+        return extraYear === anioGlobalActivo;
     });
     
-    // Actualizar resumen
-    if (summaryYear) summaryYear.textContent = yearToFilter;
+    // Actualizar resumen con anioGlobalActivo
+    if (summaryYear) summaryYear.textContent = anioGlobalActivo;
     if (countEl) countEl.textContent = extras.length;
     
     // Calcular totales
@@ -3396,7 +3402,7 @@ function renderExtrasList() {
         container.innerHTML = `
             <div style="padding: 40px 20px; text-align: center;">
                 <svg width="48" height="48" fill="var(--text-secondary)" style="opacity: 0.3; margin-bottom: 12px;" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
-                <p style="color: var(--text-secondary); font-size: 14px;">No hay registros en ${yearToFilter}</p>
+                <p style="color: var(--text-secondary); font-size: 14px;">No hay registros en ${anioGlobalActivo}</p>
                 <p style="color: var(--text-secondary); font-size: 12px; opacity: 0.7;">Pulsa el botón (+) para añadir</p>
             </div>
         `;
@@ -3445,19 +3451,15 @@ function renderExtrasHistorial() {
     actualizarExtrasVista();
 }
 
-// Actualizar widget de Extras en el Dashboard
+// Actualizar widget de Extras en el Dashboard (usa anioGlobalActivo)
 function updateExtrasDashboard() {
-    const allExtras = getExtras() || [];
+    const allExtras = getExtras();
     
-    // Leer el año DIRECTAMENTE del selector del Dashboard (igual que updateAnnualSummary)
-    const yearSelect = document.getElementById('dashboard-year');
-    const yearToFilter = yearSelect ? parseInt(yearSelect.value) : new Date().getFullYear();
-    
-    // Filtrar extras por año del Dashboard
+    // Filtrar extras por anioGlobalActivo (Single Source of Truth)
     const extras = allExtras.filter(extra => {
         if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
-        return extraYear === yearToFilter;
+        return extraYear === anioGlobalActivo;
     });
     
     let totalBruto = 0;
@@ -3470,9 +3472,9 @@ function updateExtrasDashboard() {
         totalNeto += extra.neto || 0;
     });
     
-    // Actualizar año mostrado en el widget
+    // Actualizar año mostrado en el widget (usa anioGlobalActivo)
     const yearLabel = document.getElementById('extras-dashboard-year');
-    if (yearLabel) yearLabel.textContent = yearToFilter;
+    if (yearLabel) yearLabel.textContent = anioGlobalActivo;
     
     // Actualizar valores
     const brutoEl = document.getElementById('extras-bruto-total');
