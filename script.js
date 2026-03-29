@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v68
+// Version: 2025-07-28-v69
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1663,13 +1663,17 @@ function onDashboardUpdateClick() {
     // Actualizar SOLO la variable interna del Dashboard (NO afecta a otros tabs)
     anioDashboard = selectedYear;
     
-    // Primero actualiza las opciones del mes según el año seleccionado
-    updateDashboardMonthsForYear(selectedYear);
+    try {
+        // Primero actualiza las opciones del mes según el año seleccionado
+        updateDashboardMonthsForYear(selectedYear);
+        
+        // Luego actualiza todo el Dashboard
+        updateDashboard();
+    } catch (e) {
+        console.error('Error en updateDashboard:', e);
+    }
     
-    // Luego actualiza todo el Dashboard
-    updateDashboard();
-    
-    // También actualiza el widget de Extras (usa anioDashboard)
+    // SIEMPRE actualizar el widget de Extras (independiente de errores anteriores)
     updateExtrasDashboard();
 }
 
@@ -1834,6 +1838,9 @@ function updateBankBreakdown() {
     const expenses = getExpenses();
     const loans = getLoans();
     const container = document.getElementById('dashboard-banks-breakdown');
+    
+    // Protección contra null
+    if (!container) return;
     
     if (banks.length === 0) {
         container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No hay bancos configurados</p>';
