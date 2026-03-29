@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v56
+// Version: 2025-07-28-v57
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1618,6 +1618,7 @@ function updateDashboardMonths() {
     }
     
     updateDashboard();
+    updateExtrasDashboard(); // Update Extras widget when year changes
 }
 
 function updateDashboard() {
@@ -3034,6 +3035,7 @@ function deleteAllData() {
 // ==================== MÓDULO EXTRAS (RENDIMIENTOS DEL CAPITAL) ====================
 const EXTRAS_STORAGE_KEY = 'mis-finanzas-extras';
 const IRPF_CAPITAL = 0.19; // 19% fijo para rendimientos del capital mobiliario
+let extrasSelectedYear = new Date().getFullYear(); // Año seleccionado para filtrar extras
 
 // Obtener extras del localStorage
 function getExtras() {
@@ -3044,6 +3046,27 @@ function getExtras() {
 // Guardar extras en localStorage
 function saveExtras(extras) {
     localStorage.setItem(EXTRAS_STORAGE_KEY, JSON.stringify(extras));
+}
+
+// Inicializar dropdown de años para Extras
+function initExtrasYearDropdown() {
+    const yearSelect = document.getElementById('extras-year');
+    if (!yearSelect) return;
+    
+    const currentYear = new Date().getFullYear();
+    const startYear = 2020;
+    const endYear = 2045;
+    
+    yearSelect.innerHTML = '';
+    
+    // Poblar años en orden descendente (más reciente primero)
+    for (let year = endYear; year >= startYear; year--) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === extrasSelectedYear) option.selected = true;
+        yearSelect.appendChild(option);
+    }
 }
 
 // Calcular preview al escribir el bruto
@@ -3121,14 +3144,26 @@ function eliminarExtra(id) {
     updateExtrasDashboard();
 }
 
-// Renderizar historial de extras
+// Renderizar historial de extras (filtrado por año)
 function renderExtrasHistorial() {
-    const extras = getExtras();
+    const yearSelect = document.getElementById('extras-year');
+    if (yearSelect) {
+        extrasSelectedYear = parseInt(yearSelect.value) || new Date().getFullYear();
+    }
+    
+    const allExtras = getExtras();
     const container = document.getElementById('extras-historial');
     const totalesContainer = document.getElementById('extras-totales');
+    const totalesYearLabel = document.getElementById('extras-totales-year');
+    
+    // Filtrar por año seleccionado
+    const extras = allExtras.filter(extra => {
+        const extraYear = new Date(extra.fecha).getFullYear();
+        return extraYear === extrasSelectedYear;
+    });
     
     if (extras.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center; padding: 20px;">No hay ingresos extras registrados</p>';
+        container.innerHTML = `<p style="color: var(--text-secondary); font-size: 13px; text-align: center; padding: 20px;">No hay ingresos extras registrados en ${extrasSelectedYear}</p>`;
         totalesContainer.style.display = 'none';
         return;
     }
@@ -3172,15 +3207,26 @@ function renderExtrasHistorial() {
     container.innerHTML = html;
     
     // Mostrar totales
+    if (totalesYearLabel) totalesYearLabel.textContent = extrasSelectedYear;
     document.getElementById('extras-hist-bruto').textContent = formatCurrency(totalBruto);
     document.getElementById('extras-hist-irpf').textContent = formatCurrency(totalIrpf);
     document.getElementById('extras-hist-neto').textContent = formatCurrency(totalNeto);
     totalesContainer.style.display = 'block';
 }
 
-// Actualizar widget de Extras en el Dashboard
+// Actualizar widget de Extras en el Dashboard (filtrado por año del Dashboard)
 function updateExtrasDashboard() {
-    const extras = getExtras();
+    const allExtras = getExtras();
+    
+    // Obtener el año seleccionado del Dashboard (si existe)
+    const dashboardYearSelect = document.getElementById('dashboard-year');
+    const dashboardYear = dashboardYearSelect ? parseInt(dashboardYearSelect.value) : new Date().getFullYear();
+    
+    // Filtrar por año del Dashboard
+    const extras = allExtras.filter(extra => {
+        const extraYear = new Date(extra.fecha).getFullYear();
+        return extraYear === dashboardYear;
+    });
     
     let totalBruto = 0;
     let totalIrpf = 0;
@@ -3191,6 +3237,10 @@ function updateExtrasDashboard() {
         totalIrpf += extra.irpf;
         totalNeto += extra.neto;
     });
+    
+    // Actualizar año mostrado en el widget
+    const yearLabel = document.getElementById('extras-dashboard-year');
+    if (yearLabel) yearLabel.textContent = dashboardYear;
     
     document.getElementById('extras-bruto-total').textContent = formatCurrency(totalBruto);
     document.getElementById('extras-irpf-total').textContent = formatCurrency(totalIrpf);
@@ -3205,6 +3255,9 @@ function initExtras() {
     if (fechaInput) {
         fechaInput.value = hoy;
     }
+    
+    // Inicializar selector de año
+    initExtrasYearDropdown();
     
     renderExtrasHistorial();
     updateExtrasDashboard();
