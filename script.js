@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v65
+// Version: 2025-07-28-v66
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -10,9 +10,15 @@ const PIN_KEY = 'app_security_pin';
 const LAST_UPDATE_KEY = 'finanzas_last_update';
 const EXTRAS_STORAGE_KEY = 'mis-finanzas-extras';
 
-// ==================== ESTADO GLOBAL (Single Source of Truth) ====================
-// Esta es la ÚNICA variable que determina el año de análisis en toda la app
+// ==================== ESTADO GLOBAL Y VARIABLES DE TABS ====================
+// Variable global inicial - solo se usa para inicializar los tabs al entrar con PIN
 let anioGlobalActivo = new Date().getFullYear();
+
+// Variables INTERNAS de cada tab (independientes después de la inicialización)
+let anioDashboard = new Date().getFullYear();  // Año interno del Dashboard
+let anioExtras = new Date().getFullYear();      // Año interno del tab Extras
+let anioHistorial = new Date().getFullYear();   // Año interno del tab Historial
+let anioStats = new Date().getFullYear();       // Año interno del tab Estadísticas
 
 // ==================== PIN SECURITY SYSTEM ====================
 let currentPinInput = '';
@@ -138,8 +144,16 @@ function verifyPin() {
         showAppContent();
         currentPinInput = '';
         
-        // Inicializar año de sesión al año actual al desbloquear
+        // Inicializar año global al año actual
         anioGlobalActivo = new Date().getFullYear();
+        
+        // Inicializar TODAS las variables internas de cada tab con el año global
+        anioDashboard = anioGlobalActivo;
+        anioExtras = anioGlobalActivo;
+        anioHistorial = anioGlobalActivo;
+        anioStats = anioGlobalActivo;
+        
+        // Sincronizar todos los selectores con el año global (solo una vez al iniciar)
         syncAllYearSelectors();
     } else {
         // Wrong PIN
@@ -156,14 +170,14 @@ function verifyPin() {
     }
 }
 
-// Sincronizar todos los selectores de año con el año de sesión
+// Sincronizar todos los selectores con el año global (solo se usa al iniciar sesión)
 function syncAllYearSelectors() {
     const selectors = ['dashboard-year', 'historial-year', 'extras-year', 'stats-year'];
     
     selectors.forEach(id => {
         const select = document.getElementById(id);
         if (select) {
-            select.value = anioGlobalActivo;
+            select.value = anioGlobalActivo.toString();
         }
     });
 }
@@ -1638,17 +1652,13 @@ function updateDashboardMonthsForYearOnly() {
     updateDashboardMonthsForYear(selectedYear);
 }
 
-// Función llamada por el botón "Actualizar"
+// Función llamada por el botón "Actualizar" del Dashboard
 function onDashboardUpdateClick() {
     const yearSelect = document.getElementById('dashboard-year');
-    const monthSelect = document.getElementById('dashboard-month');
     const selectedYear = parseInt(yearSelect.value);
     
-    // Actualizar el año de sesión global
-    anioGlobalActivo = selectedYear;
-    
-    // Sincronizar todos los selectores de año
-    syncAllYearSelectors();
+    // Actualizar SOLO la variable interna del Dashboard (NO afecta a otros tabs)
+    anioDashboard = selectedYear;
     
     // Primero actualiza las opciones del mes según el año seleccionado
     updateDashboardMonthsForYear(selectedYear);
@@ -1656,11 +1666,8 @@ function onDashboardUpdateClick() {
     // Luego actualiza todo el Dashboard
     updateDashboard();
     
-    // También actualiza el widget de Extras
+    // También actualiza el widget de Extras (usa anioDashboard)
     updateExtrasDashboard();
-    
-    // Y actualiza el historial de Extras si está en esa pestaña
-    renderExtrasHistorial();
 }
 
 // LEGACY: Mantener por compatibilidad pero ya no se usa con onchange
@@ -3167,8 +3174,8 @@ function initExtrasYearDropdown() {
         yearSelect.appendChild(option);
     });
     
-    // Sincronizar con el año global activo
-    yearSelect.value = anioGlobalActivo.toString();
+    // Sincronizar con la variable interna anioExtras
+    yearSelect.value = anioExtras.toString();
     
     console.log('Extras year dropdown initialized with', yearSelect.options.length, 'options');
 }
@@ -3321,20 +3328,18 @@ function eliminarExtra(id) {
 
 // Actualizar vista de Extras (llamado por botón "Actualizar" de Extras)
 function actualizarExtrasVista() {
-    // Leer el año del selector de Extras y actualizar anioGlobalActivo
+    // Leer el año del selector de Extras y actualizar SOLO anioExtras (independiente)
     const yearSelect = document.getElementById('extras-year');
     
     if (yearSelect && yearSelect.value) {
-        anioGlobalActivo = parseInt(yearSelect.value) || new Date().getFullYear();
+        anioExtras = parseInt(yearSelect.value) || new Date().getFullYear();
     }
     
-    // Sincronizar todos los selectores
-    syncAllYearSelectors();
-    
+    // NO sincronizar con otros tabs - cada tab es independiente
     renderExtrasList();
 }
 
-// Renderizar lista de extras (usa anioGlobalActivo)
+// Renderizar lista de extras (usa anioExtras - variable interna del tab)
 function renderExtrasList() {
     const container = document.getElementById('extras-list');
     const summaryYear = document.getElementById('extras-summary-year');
@@ -3347,10 +3352,10 @@ function renderExtrasList() {
     
     const allExtras = getExtras() || [];
     
-    // USAR anioGlobalActivo como fuente de verdad
-    const yearToFilter = anioGlobalActivo;
+    // USAR anioExtras (variable interna del tab Extras)
+    const yearToFilter = anioExtras;
     
-    // Filtrar por año global activo
+    // Filtrar por año del tab Extras
     const extras = allExtras.filter(extra => {
         if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
@@ -3430,14 +3435,14 @@ function renderExtrasHistorial() {
     actualizarExtrasVista();
 }
 
-// Actualizar widget de Extras en el Dashboard (filtrado por anioGlobalActivo)
+// Actualizar widget de Extras en el Dashboard (usa anioDashboard)
 function updateExtrasDashboard() {
     const allExtras = getExtras() || [];
     
-    // USAR SOLO anioGlobalActivo como fuente de verdad
-    const yearToFilter = anioGlobalActivo;
+    // USAR anioDashboard (la variable interna del Dashboard)
+    const yearToFilter = anioDashboard;
     
-    // Filtrar extras por año global activo
+    // Filtrar extras por año del Dashboard
     const extras = allExtras.filter(extra => {
         if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
