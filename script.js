@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v47
+// Version: 2025-07-28-v48
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -601,6 +601,34 @@ function calculateTotals() {
     document.getElementById('resumen-liquido').textContent = formatCurrency(totalNeto);
     
     return { totalBruto, irpfPercent, irpfAmount, ssAmount, totalDeducciones, totalNeto };
+}
+
+// Suggest optimal IRPF retention based on current gross salary (Aragón 2025)
+function sugerirRetencionIRPF() {
+    const calc = calculateTotals();
+    const brutoMensual = calc.totalBruto;
+    
+    if (brutoMensual <= 0) {
+        alert('Introduce primero los conceptos de la nómina para calcular la retención óptima.');
+        return;
+    }
+    
+    const retencionSugerida = calcularRetencionRecomendada(brutoMensual);
+    
+    // Update the input field
+    document.getElementById('irpf_percent').value = retencionSugerida.toFixed(2);
+    
+    // Recalculate totals with new percentage
+    calculateTotals();
+    
+    // Show info to user
+    const brutoAnual = brutoMensual * 12;
+    alert(`💡 Retención sugerida: ${retencionSugerida.toFixed(2)}%\n\n` +
+          `📊 Cálculo basado en:\n` +
+          `• Bruto anual estimado: ${formatCurrency(brutoAnual)}\n` +
+          `• Situación: Soltero, sin hijos (Sit. 3)\n` +
+          `• Comunidad: Aragón 2025\n\n` +
+          `ℹ️ Este porcentaje busca evitar que la declaración salga "a pagar".`);
 }
 
 // ==================== TAB NAVIGATION ====================
@@ -1766,38 +1794,107 @@ function updateBankBreakdown() {
     });
 }
 
-// Spain IRPF Tax Calculator (2026 General State Tranches)
-// Applies progressive tax brackets to the Base Liquidable (taxable base)
-function calculateIRPFLegal(baseLiquidable) {
+// ==================== IRPF CALCULATOR - ARAGÓN 2025 ====================
+// Calculates IRPF retention for a single worker in Aragón, Spain
+// Situation 3: Single, no dependents, 37 years old, ~18,500€ annual
+
+// Aragón 2025 IRPF Tax Brackets (State + Autonomous combined)
+// Source: Agencia Tributaria + Gobierno de Aragón (deflated rates 2025)
+const ARAGON_2025_BRACKETS = [
+    { limit: 12450, stateRate: 0.095, autonomousRate: 0.10 },   // 19.5% total
+    { limit: 20200, stateRate: 0.12, autonomousRate: 0.1175 },  // 23.75% total
+    { limit: 35200, stateRate: 0.15, autonomousRate: 0.1525 },  // 30.25% total
+    { limit: 60000, stateRate: 0.185, autonomousRate: 0.19 },   // 37.5% total
+    { limit: 150000, stateRate: 0.225, autonomousRate: 0.2275 } // 45.25% total
+];
+
+// Constants for 2025
+const GASTOS_DEDUCIBLES = 2000;      // Fixed deductible expenses
+const MINIMO_PERSONAL = 5550;        // Personal minimum (single, no dependents)
+const COTIZACION_SS_PERCENT = 6.35;  // Approximate SS contribution %
+
+// Calculate reduction for work income (Rendimientos del Trabajo)
+// For income between 14,852€ and 19,747.50€
+function calcularReduccionRendimientos(rendimientoNeto) {
+    if (rendimientoNeto <= 14852) {
+        return 7302.11; // Maximum reduction
+    } else if (rendimientoNeto <= 19747.50) {
+        // Official formula: 7,302.11 - [1.75 × (Rendimiento Neto - 14,852)]
+        return 7302.11 - (1.75 * (rendimientoNeto - 14852));
+    } else if (rendimientoNeto <= 22000) {
+        // Reduced reduction for higher incomes
+        return Math.max(0, 3700 - (1.5 * (rendimientoNeto - 19747.50)));
+    }
+    return 0; // No reduction above 22,000€
+}
+
+// Calculate IRPF using Aragón 2025 brackets
+function calcularCuotaIRPF(baseLiquidable) {
     if (baseLiquidable <= 0) return 0;
     
-    // Spain 2026 IRPF General State Tranches (cumulative progressive)
-    const tranches = [
-        { limit: 12450, rate: 0.19 },
-        { limit: 20200, rate: 0.24 },
-        { limit: 35200, rate: 0.30 },
-        { limit: 60000, rate: 0.37 }
-    ];
-    
-    let tax = 0;
+    let cuota = 0;
     let previousLimit = 0;
     
-    for (const tranche of tranches) {
+    for (const bracket of ARAGON_2025_BRACKETS) {
         if (baseLiquidable <= previousLimit) break;
         
-        const taxableInTranche = Math.min(baseLiquidable, tranche.limit) - previousLimit;
-        if (taxableInTranche > 0) {
-            tax += taxableInTranche * tranche.rate;
+        const taxableInBracket = Math.min(baseLiquidable, bracket.limit) - previousLimit;
+        if (taxableInBracket > 0) {
+            const totalRate = bracket.stateRate + bracket.autonomousRate;
+            cuota += taxableInBracket * totalRate;
         }
-        previousLimit = tranche.limit;
+        previousLimit = bracket.limit;
     }
     
-    // For income above €60,000, apply 45% marginal rate
-    if (baseLiquidable > 60000) {
-        tax += (baseLiquidable - 60000) * 0.45;
+    // For income above €150,000, apply 47% marginal rate
+    if (baseLiquidable > 150000) {
+        cuota += (baseLiquidable - 150000) * 0.47;
     }
     
-    return tax;
+    return cuota;
+}
+
+// Main function: Calculate recommended IRPF retention percentage
+// Based on annual projections for a single worker in Aragón
+function calcularRetencionRecomendada(brutoMensual) {
+    if (brutoMensual <= 0) return 0;
+    
+    // Step 1: Project annual gross income
+    const brutoAnual = brutoMensual * 12;
+    
+    // Step 2: Estimate annual SS contributions
+    const cotizacionSS = brutoAnual * (COTIZACION_SS_PERCENT / 100);
+    
+    // Step 3: Calculate Net Work Income (Rendimiento Neto)
+    const rendimientoBruto = brutoAnual;
+    const rendimientoNeto = rendimientoBruto - cotizacionSS - GASTOS_DEDUCIBLES;
+    
+    // Step 4: Apply reduction for work income
+    const reduccion = calcularReduccionRendimientos(rendimientoNeto);
+    
+    // Step 5: Calculate Taxable Base (Base Liquidable)
+    const baseLiquidablePrevia = rendimientoNeto - reduccion;
+    
+    // Step 6: Apply Personal Minimum to lower brackets
+    // The minimum is applied against the tax, not the base
+    const baseLiquidable = Math.max(0, baseLiquidablePrevia);
+    
+    // Step 7: Calculate gross tax (Cuota Íntegra)
+    const cuotaIntegraSinMinimo = calcularCuotaIRPF(baseLiquidable);
+    const cuotaMinimo = calcularCuotaIRPF(MINIMO_PERSONAL);
+    const cuotaIntegra = Math.max(0, cuotaIntegraSinMinimo - cuotaMinimo);
+    
+    // Step 8: Calculate retention percentage
+    const porcentajeRetencion = (cuotaIntegra / brutoAnual) * 100;
+    
+    // Round to 2 decimals and ensure minimum 2% for incomes above minimum
+    if (brutoAnual < 15000) return 0;
+    return Math.max(2, Math.round(porcentajeRetencion * 100) / 100);
+}
+
+// Wrapper for legacy compatibility
+function calculateIRPFLegal(baseLiquidable) {
+    return calcularCuotaIRPF(baseLiquidable);
 }
 
 function updateAnnualSummary() {

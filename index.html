@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v47 -->
+<!-- Updated: 2025-07-28-v48 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -855,14 +855,17 @@
                         style="background: transparent; border: none; color: var(--text-primary); font-size: 16px; font-weight: 600; width: 100%; opacity: 0.8; cursor: not-allowed;">
                 </div>
                 
-                <!-- Box 2: Percentage (Editable) -->
+                <!-- Box 2: Percentage (Editable) with Auto-Calculate -->
                 <div style="background: var(--bg-input); border-radius: 10px; padding: 12px;">
                     <p style="color: var(--text-secondary); font-size: 11px; margin-bottom: 4px; text-transform: uppercase;">Porcentaje</p>
-                    <div style="display: flex; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
                         <input type="number" inputmode="decimal" id="irpf_percent" value="6" 
-                            oninput="calculateTotals()" min="0" max="100" step="0.001"
-                            style="background: transparent; border: none; color: var(--primary); font-size: 16px; font-weight: 600; width: 100%; text-align: left;">
+                            oninput="calculateTotals()" min="0" max="100" step="0.01"
+                            style="background: transparent; border: none; color: var(--primary); font-size: 16px; font-weight: 600; width: 50px; text-align: left;">
                         <span style="color: var(--primary); font-weight: 600;">%</span>
+                        <button onclick="sugerirRetencionIRPF()" 
+                            style="margin-left: auto; padding: 4px 8px; font-size: 9px; background: var(--purple); color: white; border: none; border-radius: 6px; cursor: pointer;"
+                            title="Calcular retención óptima Aragón 2025">Auto</button>
                     </div>
                 </div>
                 
