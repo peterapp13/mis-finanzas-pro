@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v71
+// Version: 2025-07-28-v72
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -228,6 +228,7 @@ function executeHardReset() {
         PIN_KEY,               // app_security_pin
         LAST_UPDATE_KEY,       // finanzas_last_update
         EXTRAS_STORAGE_KEY,    // mis-finanzas-extras
+        NOMINA_DEFAULTS_KEY,   // finanzas_nomina_defaults (memoria selectiva)
         'mis-finanzas-percentages' // Porcentajes guardados
     ];
     
@@ -324,6 +325,94 @@ const ssManuallyEdited = {};
 
 // Persistent percentage configuration key
 const CONFIG_PERCENTAGES_KEY = 'mis-finanzas-pro-config-percentages';
+
+// Key for storing payroll defaults (memoria selectiva)
+const NOMINA_DEFAULTS_KEY = 'finanzas_nomina_defaults';
+
+// Valores por defecto hardcoded (fallback si no hay preferencias guardadas)
+const HARDCODED_DEFAULTS = {
+    salario_base: { unidad: 30, precio: 36 },
+    pp_pagas: { unidad: 30, precio: 6 },
+    salario_minimo: { unidad: 30, precio: 5.4833 },
+    productividad: { unidad: 150, precio: 1 }
+};
+
+// Obtener valores por defecto (de localStorage o hardcoded)
+function getValoresPorDefecto() {
+    const saved = localStorage.getItem(NOMINA_DEFAULTS_KEY);
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.error('Error parsing nomina defaults:', e);
+        }
+    }
+    return { ...HARDCODED_DEFAULTS };
+}
+
+// Guardar valores por defecto con memoria selectiva
+function guardarMemoriaSelectiva(conceptData) {
+    const defaults = getValoresPorDefecto();
+    
+    // Salario Base: guarda precio, restaura unidad a 30
+    if (conceptData.salario_base) {
+        defaults.salario_base = {
+            unidad: 30, // Siempre restaurar a 30
+            precio: conceptData.salario_base.precio || HARDCODED_DEFAULTS.salario_base.precio
+        };
+    }
+    
+    // P.P. Pagas Extras: guarda precio, restaura unidad a 30
+    if (conceptData.pp_pagas) {
+        defaults.pp_pagas = {
+            unidad: 30, // Siempre restaurar a 30
+            precio: conceptData.pp_pagas.precio || HARDCODED_DEFAULTS.pp_pagas.precio
+        };
+    }
+    
+    // Salario Mínimo Garantizado: guarda precio, restaura unidad a 30
+    if (conceptData.salario_minimo) {
+        defaults.salario_minimo = {
+            unidad: 30, // Siempre restaurar a 30
+            precio: conceptData.salario_minimo.precio || HARDCODED_DEFAULTS.salario_minimo.precio
+        };
+    }
+    
+    // Productividad: guarda TANTO unidad como precio (memoria total)
+    if (conceptData.productividad) {
+        defaults.productividad = {
+            unidad: conceptData.productividad.unidad || HARDCODED_DEFAULTS.productividad.unidad,
+            precio: conceptData.productividad.precio || HARDCODED_DEFAULTS.productividad.precio
+        };
+    }
+    
+    localStorage.setItem(NOMINA_DEFAULTS_KEY, JSON.stringify(defaults));
+}
+
+// Cargar valores por defecto en el formulario
+function cargarValoresPorDefecto() {
+    const defaults = getValoresPorDefecto();
+    
+    // Aplicar valores por defecto a los conceptos configurados
+    Object.keys(defaults).forEach(conceptId => {
+        const config = defaults[conceptId];
+        
+        const unidadInput = document.getElementById(`${conceptId}_unidad`);
+        const precioInput = document.getElementById(`${conceptId}_precio`);
+        
+        if (unidadInput && config.unidad !== undefined) {
+            unidadInput.value = config.unidad;
+        }
+        if (precioInput && config.precio !== undefined) {
+            precioInput.value = config.precio;
+        }
+        
+        // Recalcular fila
+        if (unidadInput || precioInput) {
+            calculateRow(conceptId);
+        }
+    });
+}
 
 let selectedMonth = new Date().getMonth() + 1;
 let selectedYear = new Date().getFullYear();
@@ -430,6 +519,9 @@ function initPayrollTable() {
         `;
         tbody.appendChild(row);
     });
+    
+    // Cargar valores por defecto después de crear la tabla
+    cargarValoresPorDefecto();
 }
 
 function calculateRow(conceptId) {
@@ -789,6 +881,9 @@ function savePayroll() {
         };
     });
     
+    // MEMORIA SELECTIVA: Guardar valores por defecto para próxima nómina
+    guardarMemoriaSelectiva(conceptData);
+    
     // Collect all SS concept data
     const ssData = {};
     ssConcepts.forEach(concept => {
@@ -865,6 +960,10 @@ function resetForm() {
     });
     
     document.getElementById('irpf_percent').value = '6';
+    
+    // CARGAR VALORES POR DEFECTO (memoria selectiva)
+    cargarValoresPorDefecto();
+    
     calculateTotals();
 }
 
