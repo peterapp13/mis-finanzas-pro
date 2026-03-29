@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v48
+// Version: 2025-07-28-v49
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -614,6 +614,7 @@ function sugerirRetencionIRPF() {
     }
     
     const retencionSugerida = calcularRetencionRecomendada(brutoMensual);
+    const desglose = mostrarCalculoIRPF(brutoMensual);
     
     // Update the input field
     document.getElementById('irpf_percent').value = retencionSugerida.toFixed(2);
@@ -621,14 +622,26 @@ function sugerirRetencionIRPF() {
     // Recalculate totals with new percentage
     calculateTotals();
     
-    // Show info to user
-    const brutoAnual = brutoMensual * 12;
+    // Show detailed breakdown to user
+    const tieneReduccion = parseFloat(desglose.reduccionTrabajo) > 0;
+    
     alert(`💡 Retención sugerida: ${retencionSugerida.toFixed(2)}%\n\n` +
-          `📊 Cálculo basado en:\n` +
-          `• Bruto anual estimado: ${formatCurrency(brutoAnual)}\n` +
-          `• Situación: Soltero, sin hijos (Sit. 3)\n` +
-          `• Comunidad: Aragón 2025\n\n` +
-          `ℹ️ Este porcentaje busca evitar que la declaración salga "a pagar".`);
+          `📊 DESGLOSE DEL CÁLCULO:\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `• Bruto Anual: ${formatCurrency(desglose.brutoAnual)}\n` +
+          `• Cotización SS: -${desglose.cotizacionSS} €\n` +
+          `• Gastos Deducibles: -2.000 €\n` +
+          `• Rendimiento Neto: ${desglose.rendimientoNeto} €\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `• Reducción Trabajo: ${tieneReduccion ? '-' + desglose.reduccionTrabajo + ' €' : 'NO APLICA (>22.000€)'}\n` +
+          `• Base Liquidable: ${desglose.baseLiquidable} €\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `• Cuota Íntegra: ${desglose.cuotaIntegra} €\n` +
+          `• Mínimo Personal: -${desglose.cuotaMinimo} €\n` +
+          `• Cuota Líquida: ${desglose.cuotaLiquida} €\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `ℹ️ Situación: Soltero, sin hijos | Aragón 2025\n` +
+          `⚠️ Incluye +0.5% de margen de seguridad`);
 }
 
 // ==================== TAB NAVIGATION ====================
@@ -1795,11 +1808,10 @@ function updateBankBreakdown() {
 }
 
 // ==================== IRPF CALCULATOR - ARAGÓN 2025 ====================
-// Calculates IRPF retention for a single worker in Aragón, Spain
-// Situation 3: Single, no dependents, 37 years old, ~18,500€ annual
+// Dynamic IRPF calculation for any income level
+// Automatically adjusts reduction and brackets based on gross annual income
 
 // Aragón 2025 IRPF Tax Brackets (State + Autonomous combined)
-// Source: Agencia Tributaria + Gobierno de Aragón (deflated rates 2025)
 const ARAGON_2025_BRACKETS = [
     { limit: 12450, stateRate: 0.095, autonomousRate: 0.10 },   // 19.5% total
     { limit: 20200, stateRate: 0.12, autonomousRate: 0.1175 },  // 23.75% total
@@ -1813,22 +1825,33 @@ const GASTOS_DEDUCIBLES = 2000;      // Fixed deductible expenses
 const MINIMO_PERSONAL = 5550;        // Personal minimum (single, no dependents)
 const COTIZACION_SS_PERCENT = 6.35;  // Approximate SS contribution %
 
-// Calculate reduction for work income (Rendimientos del Trabajo)
-// For income between 14,852€ and 19,747.50€
+// Dynamic reduction for work income (Rendimientos del Trabajo)
+// Returns 0 if income is above thresholds
 function calcularReduccionRendimientos(rendimientoNeto) {
-    if (rendimientoNeto <= 14852) {
-        return 7302.11; // Maximum reduction
-    } else if (rendimientoNeto <= 19747.50) {
-        // Official formula: 7,302.11 - [1.75 × (Rendimiento Neto - 14,852)]
-        return 7302.11 - (1.75 * (rendimientoNeto - 14852));
-    } else if (rendimientoNeto <= 22000) {
-        // Reduced reduction for higher incomes
-        return Math.max(0, 3700 - (1.5 * (rendimientoNeto - 19747.50)));
+    // No reduction for high incomes
+    if (rendimientoNeto > 22000) {
+        return 0;
     }
-    return 0; // No reduction above 22,000€
+    
+    // Maximum reduction for very low incomes
+    if (rendimientoNeto <= 14852) {
+        return 7302.11;
+    }
+    
+    // Transitional formula: 14,852 - 19,747.50
+    if (rendimientoNeto <= 19747.50) {
+        // Official formula: 7,302.11 - [1.75 × (Rendimiento Neto - 14,852)]
+        return Math.max(0, 7302.11 - (1.75 * (rendimientoNeto - 14852)));
+    }
+    
+    // Reduced transitional: 19,747.50 - 22,000
+    // Linear reduction from ~1,735€ to 0€
+    const remaining = Math.max(0, 7302.11 - (1.75 * (19747.50 - 14852)));
+    const proportion = (22000 - rendimientoNeto) / (22000 - 19747.50);
+    return Math.max(0, remaining * proportion);
 }
 
-// Calculate IRPF using Aragón 2025 brackets
+// Calculate IRPF using Aragón 2025 progressive brackets
 function calcularCuotaIRPF(baseLiquidable) {
     if (baseLiquidable <= 0) return 0;
     
@@ -1854,42 +1877,75 @@ function calcularCuotaIRPF(baseLiquidable) {
     return cuota;
 }
 
-// Main function: Calculate recommended IRPF retention percentage
-// Based on annual projections for a single worker in Aragón
+// MAIN DYNAMIC FUNCTION: Calculate recommended IRPF retention percentage
+// Fully dynamic - works for ANY income level
 function calcularRetencionRecomendada(brutoMensual) {
     if (brutoMensual <= 0) return 0;
     
-    // Step 1: Project annual gross income
+    // Step 1: Calculate annual gross income
     const brutoAnual = brutoMensual * 12;
     
-    // Step 2: Estimate annual SS contributions
+    // Step 2: Calculate annual SS contributions (dynamic)
     const cotizacionSS = brutoAnual * (COTIZACION_SS_PERCENT / 100);
     
-    // Step 3: Calculate Net Work Income (Rendimiento Neto)
-    const rendimientoBruto = brutoAnual;
-    const rendimientoNeto = rendimientoBruto - cotizacionSS - GASTOS_DEDUCIBLES;
+    // Step 3: Calculate Net Work Income (Rendimiento Neto del Trabajo)
+    const rendimientoNeto = brutoAnual - cotizacionSS - GASTOS_DEDUCIBLES;
     
-    // Step 4: Apply reduction for work income
+    // Step 4: Apply DYNAMIC reduction for work income
+    // This will be 0 for incomes > 22,000€
     const reduccion = calcularReduccionRendimientos(rendimientoNeto);
     
-    // Step 5: Calculate Taxable Base (Base Liquidable)
-    const baseLiquidablePrevia = rendimientoNeto - reduccion;
+    // Step 5: Calculate Taxable Base (Base Liquidable General)
+    const baseLiquidable = Math.max(0, rendimientoNeto - reduccion);
     
-    // Step 6: Apply Personal Minimum to lower brackets
-    // The minimum is applied against the tax, not the base
-    const baseLiquidable = Math.max(0, baseLiquidablePrevia);
-    
-    // Step 7: Calculate gross tax (Cuota Íntegra)
+    // Step 6: Calculate gross tax WITHOUT personal minimum
     const cuotaIntegraSinMinimo = calcularCuotaIRPF(baseLiquidable);
-    const cuotaMinimo = calcularCuotaIRPF(MINIMO_PERSONAL);
-    const cuotaIntegra = Math.max(0, cuotaIntegraSinMinimo - cuotaMinimo);
     
-    // Step 8: Calculate retention percentage
-    const porcentajeRetencion = (cuotaIntegra / brutoAnual) * 100;
+    // Step 7: Calculate tax credit for personal minimum
+    // The minimum reduces tax, not the base
+    const cuotaMinimo = calcularCuotaIRPF(Math.min(MINIMO_PERSONAL, baseLiquidable));
     
-    // Round to 2 decimals and ensure minimum 2% for incomes above minimum
+    // Step 8: Final tax (Cuota Líquida)
+    const cuotaLiquida = Math.max(0, cuotaIntegraSinMinimo - cuotaMinimo);
+    
+    // Step 9: Calculate retention percentage over gross income
+    const porcentajeRetencion = (cuotaLiquida / brutoAnual) * 100;
+    
+    // Minimum thresholds for retention obligation
+    // Below ~15,000€ annual: generally exempt from retention
     if (brutoAnual < 15000) return 0;
-    return Math.max(2, Math.round(porcentajeRetencion * 100) / 100);
+    if (brutoAnual < 15500) return Math.max(0, porcentajeRetencion);
+    
+    // Add small safety margin (0.5%) to avoid "a pagar" situations
+    const retencionConMargen = porcentajeRetencion + 0.5;
+    
+    // Round to 2 decimals
+    return Math.round(retencionConMargen * 100) / 100;
+}
+
+// Debug function to show calculation breakdown
+function mostrarCalculoIRPF(brutoMensual) {
+    const brutoAnual = brutoMensual * 12;
+    const cotizacionSS = brutoAnual * (COTIZACION_SS_PERCENT / 100);
+    const rendimientoNeto = brutoAnual - cotizacionSS - GASTOS_DEDUCIBLES;
+    const reduccion = calcularReduccionRendimientos(rendimientoNeto);
+    const baseLiquidable = Math.max(0, rendimientoNeto - reduccion);
+    const cuotaIntegra = calcularCuotaIRPF(baseLiquidable);
+    const cuotaMinimo = calcularCuotaIRPF(Math.min(MINIMO_PERSONAL, baseLiquidable));
+    const cuotaLiquida = Math.max(0, cuotaIntegra - cuotaMinimo);
+    const porcentaje = calcularRetencionRecomendada(brutoMensual);
+    
+    return {
+        brutoAnual,
+        cotizacionSS: cotizacionSS.toFixed(2),
+        rendimientoNeto: rendimientoNeto.toFixed(2),
+        reduccionTrabajo: reduccion.toFixed(2),
+        baseLiquidable: baseLiquidable.toFixed(2),
+        cuotaIntegra: cuotaIntegra.toFixed(2),
+        cuotaMinimo: cuotaMinimo.toFixed(2),
+        cuotaLiquida: cuotaLiquida.toFixed(2),
+        porcentajeRetencion: porcentaje
+    };
 }
 
 // Wrapper for legacy compatibility
