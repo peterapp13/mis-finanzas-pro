@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v57
+// Version: 2025-07-28-v58
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1511,43 +1511,15 @@ function initDashboardSelectors() {
         return;
     }
     
-    const data = getData();
     const currentYear = new Date().getFullYear();
     
-    console.log('initDashboardSelectors - data length:', data.length);
+    // SIEMPRE inicializar con el año actual
+    populateYearDropdown(yearSelect, currentYear);
     
-    // Find the most recent record
-    let mostRecentRecord = null;
-    if (data.length > 0) {
-        // Create a copy to avoid mutating the original array
-        const sortedData = [...data].sort((a, b) => {
-            const yearA = parseInt(a.year);
-            const yearB = parseInt(b.year);
-            if (yearA !== yearB) return yearB - yearA;
-            return parseInt(b.month) - parseInt(a.month);
-        });
-        mostRecentRecord = sortedData[0];
-        console.log('Most recent record:', mostRecentRecord?.year, mostRecentRecord?.month);
-    }
+    // Populate months for current year
+    updateDashboardMonthsForYear(currentYear);
     
-    // Initialize year dropdown
-    // If we have records, default to the most recent record's year
-    // Otherwise, default to current year
-    const defaultYear = mostRecentRecord ? parseInt(mostRecentRecord.year) : currentYear;
-    console.log('Default year:', defaultYear);
-    
-    populateYearDropdown(yearSelect, defaultYear);
-    
-    // Populate months for selected year - this will add both "Nómina Actual" and saved records
-    updateDashboardMonthsForYear(defaultYear);
-    
-    // If we have a most recent record for the selected year, select it instead of "Nómina Actual"
-    if (mostRecentRecord && parseInt(mostRecentRecord.year) === defaultYear) {
-        monthSelect.value = mostRecentRecord.id;
-        console.log('Selected month record id:', mostRecentRecord.id);
-    }
-    
-    // Force update dashboard with selected values
+    // Force update dashboard with selected values (graceful handling of empty data)
     updateDashboard();
 }
 
@@ -1599,6 +1571,36 @@ function updateDashboardMonthsForYear(targetYear) {
     }
 }
 
+// Solo actualiza las opciones del selector de mes (NO llama a updateDashboard)
+function updateDashboardMonthsForYearOnly() {
+    const yearSelect = document.getElementById('dashboard-year');
+    const monthSelect = document.getElementById('dashboard-month');
+    const selectedYear = parseInt(yearSelect.value);
+    
+    // Use helper function to populate months
+    updateDashboardMonthsForYear(selectedYear);
+}
+
+// Función llamada por el botón "Actualizar"
+function onDashboardUpdateClick() {
+    const yearSelect = document.getElementById('dashboard-year');
+    const monthSelect = document.getElementById('dashboard-month');
+    const selectedYear = parseInt(yearSelect.value);
+    
+    // Primero actualiza las opciones del mes según el año seleccionado
+    updateDashboardMonthsForYear(selectedYear);
+    
+    // Luego actualiza todo el Dashboard
+    updateDashboard();
+    
+    // También actualiza el widget de Extras
+    updateExtrasDashboard();
+    
+    // Y actualiza el historial de Extras si está en esa pestaña
+    renderExtrasHistorial();
+}
+
+// LEGACY: Mantener por compatibilidad pero ya no se usa con onchange
 function updateDashboardMonths() {
     const yearSelect = document.getElementById('dashboard-year');
     const monthSelect = document.getElementById('dashboard-month');
@@ -1632,7 +1634,7 @@ function updateDashboard() {
     const monthSelect = document.getElementById('dashboard-month');
     if (!monthSelect) return;
     
-    const data = getData();
+    const data = getData() || []; // Graceful fallback: array vacío si no hay datos
     const selectedValue = monthSelect.value;
     
     // Get net income for selected period
@@ -1648,7 +1650,8 @@ function updateDashboard() {
             netIncome = parseFloat(netoText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
         }
         periodLabel = 'Nómina Actual';
-    } else if (selectedValue === 'empty') {
+    } else if (selectedValue === 'empty' || !selectedValue) {
+        // Graceful handling cuando no hay valor o es vacío
         netIncome = 0;
         periodLabel = 'Sin registros';
     } else {
@@ -3146,18 +3149,32 @@ function eliminarExtra(id) {
 
 // Renderizar historial de extras (filtrado por año)
 function renderExtrasHistorial() {
-    const yearSelect = document.getElementById('extras-year');
-    if (yearSelect) {
-        extrasSelectedYear = parseInt(yearSelect.value) || new Date().getFullYear();
+    // Sincronizar con el año del Dashboard primero
+    const dashboardYearSelect = document.getElementById('dashboard-year');
+    const extrasYearSelect = document.getElementById('extras-year');
+    
+    if (dashboardYearSelect && extrasYearSelect) {
+        // Sincronizar el selector de Extras con el del Dashboard
+        extrasYearSelect.value = dashboardYearSelect.value;
     }
     
-    const allExtras = getExtras();
+    // Usar el año del selector de Extras (ya sincronizado)
+    if (extrasYearSelect) {
+        extrasSelectedYear = parseInt(extrasYearSelect.value) || new Date().getFullYear();
+    } else {
+        extrasSelectedYear = new Date().getFullYear();
+    }
+    
+    const allExtras = getExtras() || []; // Graceful fallback
     const container = document.getElementById('extras-historial');
     const totalesContainer = document.getElementById('extras-totales');
     const totalesYearLabel = document.getElementById('extras-totales-year');
     
+    if (!container || !totalesContainer) return; // Graceful exit si no existen elementos
+    
     // Filtrar por año seleccionado
     const extras = allExtras.filter(extra => {
+        if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
         return extraYear === extrasSelectedYear;
     });
@@ -3177,9 +3194,9 @@ function renderExtrasHistorial() {
     let totalNeto = 0;
     
     extras.forEach(extra => {
-        totalBruto += extra.bruto;
-        totalIrpf += extra.irpf;
-        totalNeto += extra.neto;
+        totalBruto += extra.bruto || 0;
+        totalIrpf += extra.irpf || 0;
+        totalNeto += extra.neto || 0;
         
         const fechaFormateada = new Date(extra.fecha).toLocaleDateString('es-ES', {
             day: '2-digit',
@@ -3190,12 +3207,12 @@ function renderExtrasHistorial() {
         html += `
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--bg-input);">
                 <div style="flex: 1;">
-                    <p style="font-size: 13px; font-weight: 500;">${extra.concepto}</p>
+                    <p style="font-size: 13px; font-weight: 500;">${extra.concepto || 'Sin concepto'}</p>
                     <p style="font-size: 11px; color: var(--text-secondary);">${fechaFormateada}</p>
                 </div>
                 <div style="text-align: right; margin-right: 12px;">
-                    <p style="font-size: 13px; font-weight: 600; color: var(--primary);">${formatCurrency(extra.neto)}</p>
-                    <p style="font-size: 10px; color: var(--text-secondary);">Bruto: ${formatCurrency(extra.bruto)}</p>
+                    <p style="font-size: 13px; font-weight: 600; color: var(--primary);">${formatCurrency(extra.neto || 0)}</p>
+                    <p style="font-size: 10px; color: var(--text-secondary);">Bruto: ${formatCurrency(extra.bruto || 0)}</p>
                 </div>
                 <button onclick="eliminarExtra('${extra.id}')" style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 107, 107, 0.1); border: none; color: var(--danger); cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
@@ -3216,7 +3233,7 @@ function renderExtrasHistorial() {
 
 // Actualizar widget de Extras en el Dashboard (filtrado por año del Dashboard)
 function updateExtrasDashboard() {
-    const allExtras = getExtras();
+    const allExtras = getExtras() || []; // Graceful fallback
     
     // Obtener el año seleccionado del Dashboard (si existe)
     const dashboardYearSelect = document.getElementById('dashboard-year');
@@ -3224,6 +3241,7 @@ function updateExtrasDashboard() {
     
     // Filtrar por año del Dashboard
     const extras = allExtras.filter(extra => {
+        if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
         return extraYear === dashboardYear;
     });
@@ -3233,18 +3251,23 @@ function updateExtrasDashboard() {
     let totalNeto = 0;
     
     extras.forEach(extra => {
-        totalBruto += extra.bruto;
-        totalIrpf += extra.irpf;
-        totalNeto += extra.neto;
+        totalBruto += extra.bruto || 0;
+        totalIrpf += extra.irpf || 0;
+        totalNeto += extra.neto || 0;
     });
     
     // Actualizar año mostrado en el widget
     const yearLabel = document.getElementById('extras-dashboard-year');
     if (yearLabel) yearLabel.textContent = dashboardYear;
     
-    document.getElementById('extras-bruto-total').textContent = formatCurrency(totalBruto);
-    document.getElementById('extras-irpf-total').textContent = formatCurrency(totalIrpf);
-    document.getElementById('extras-neto-total').textContent = formatCurrency(totalNeto);
+    // Actualizar valores (graceful handling si no existen los elementos)
+    const brutoEl = document.getElementById('extras-bruto-total');
+    const irpfEl = document.getElementById('extras-irpf-total');
+    const netoEl = document.getElementById('extras-neto-total');
+    
+    if (brutoEl) brutoEl.textContent = formatCurrency(totalBruto);
+    if (irpfEl) irpfEl.textContent = formatCurrency(totalIrpf);
+    if (netoEl) netoEl.textContent = formatCurrency(totalNeto);
 }
 
 // Inicializar Extras al cargar la app

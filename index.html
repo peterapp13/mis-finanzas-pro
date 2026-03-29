@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v57 -->
+<!-- Updated: 2025-07-28-v58 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1337,20 +1337,24 @@
         <!-- Period Selector (Two-Level) -->
         <div class="card" style="margin-bottom: 16px;">
             <p style="font-weight: 600; margin-bottom: 12px;">Período de Análisis</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
                 <div>
                     <label style="color: var(--text-secondary); font-size: 11px; display: block; margin-bottom: 6px;">Año</label>
-                    <select id="dashboard-year" onchange="updateDashboardMonths()"
+                    <select id="dashboard-year"
                         style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 12px 14px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
                     </select>
                 </div>
                 <div>
                     <label style="color: var(--text-secondary); font-size: 11px; display: block; margin-bottom: 6px;">Mes</label>
-                    <select id="dashboard-month" onchange="updateDashboard()"
+                    <select id="dashboard-month"
                         style="width: 100%; background: var(--bg-input); border: none; border-radius: 10px; padding: 12px 14px; color: var(--text-primary); font-size: 14px; cursor: pointer; outline: none;">
                         <option value="current">Nómina Actual</option>
                     </select>
                 </div>
+                <button onclick="onDashboardUpdateClick()" style="height: 46px; padding: 0 20px; background: var(--primary); color: var(--bg-dark); border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+                    Actualizar
+                </button>
             </div>
         </div>
         
