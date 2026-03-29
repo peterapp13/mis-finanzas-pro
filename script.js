@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v79
+// Version: 2025-07-28-v80
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1908,6 +1908,9 @@ function updateDashboard() {
     // Update bank breakdown
     updateBankBreakdown();
     
+    // Update balance verification widget
+    updateBalanceVerification();
+    
     // Update annual summary
     updateAnnualSummary();
     
@@ -2005,6 +2008,91 @@ function updateBankBreakdown() {
         
         container.appendChild(card);
     });
+}
+
+// ==================== VERIFICACIÓN DE BALANCE ====================
+// Widget que verifica que Ahorro + Disponible + Bancos = Líquido Nómina
+function updateBalanceVerification() {
+    // Obtener el líquido de la nómina seleccionada
+    const netIncomeText = document.getElementById('dashboard-net-income').textContent || '0';
+    const liquidoNomina = parseFloat(netIncomeText.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+    
+    // Obtener el fondo de ahorro
+    const savingsBalance = getSavingsFund() || 0;
+    
+    // Calcular dinero disponible (de la regla 50/30/20)
+    const disponibleText = document.getElementById('rule-20-status');
+    let disponible = 0;
+    if (disponibleText && disponibleText.textContent.includes('libre')) {
+        const match = disponibleText.textContent.match(/([\d.,]+)/);
+        if (match) {
+            disponible = parseFloat(match[1].replace('.', '').replace(',', '.')) || 0;
+        }
+    }
+    
+    // Calcular total de transferencias a bancos
+    const banks = getBanks() || [];
+    const expenses = getExpenses() || [];
+    const loans = getLoans() || [];
+    
+    let totalBancos = 0;
+    banks.forEach(bank => {
+        const bankExpenses = expenses.filter(e => e.bankId === bank.id);
+        const bankLoans = loans.filter(l => l.bankId === bank.id);
+        
+        let bankTotal = 0;
+        bankExpenses.forEach(exp => {
+            bankTotal += parseFloat(exp.amount) || 0;
+        });
+        bankLoans.forEach(loan => {
+            bankTotal += parseFloat(loan.monthlyPayment) || 0;
+        });
+        
+        totalBancos += bankTotal;
+    });
+    
+    // Calcular total distribuido
+    const totalDistribuido = savingsBalance + disponible + totalBancos;
+    
+    // Calcular diferencia
+    const diferencia = totalDistribuido - liquidoNomina;
+    
+    // Actualizar UI
+    const verifyAhorro = document.getElementById('verify-ahorro');
+    const verifyDisponible = document.getElementById('verify-disponible');
+    const verifyBancos = document.getElementById('verify-bancos');
+    const verifyTotalDistribuido = document.getElementById('verify-total-distribuido');
+    const verifyLiquido = document.getElementById('verify-liquido');
+    const verifyDiferencia = document.getElementById('verify-diferencia');
+    const verifyDiferenciaContainer = document.getElementById('verify-diferencia-container');
+    
+    if (verifyAhorro) verifyAhorro.textContent = formatCurrency(savingsBalance);
+    if (verifyDisponible) verifyDisponible.textContent = formatCurrency(disponible);
+    if (verifyBancos) verifyBancos.textContent = formatCurrency(totalBancos);
+    if (verifyTotalDistribuido) verifyTotalDistribuido.textContent = formatCurrency(totalDistribuido);
+    if (verifyLiquido) verifyLiquido.textContent = formatCurrency(liquidoNomina);
+    
+    if (verifyDiferencia && verifyDiferenciaContainer) {
+        verifyDiferencia.textContent = formatCurrency(diferencia);
+        
+        // Cambiar color según si cuadra o no
+        if (Math.abs(diferencia) < 0.01) {
+            // Cuadra perfecto
+            verifyDiferencia.style.color = 'var(--success)';
+            verifyDiferenciaContainer.style.borderColor = 'var(--success)';
+            verifyDiferencia.textContent = '✓ 0,00 €';
+        } else if (diferencia > 0) {
+            // Sobra dinero (distribuido > líquido)
+            verifyDiferencia.style.color = 'var(--warning)';
+            verifyDiferenciaContainer.style.borderColor = 'var(--warning)';
+            verifyDiferencia.textContent = `+${formatCurrency(diferencia)}`;
+        } else {
+            // Falta dinero (distribuido < líquido)
+            verifyDiferencia.style.color = 'var(--danger)';
+            verifyDiferenciaContainer.style.borderColor = 'var(--danger)';
+            verifyDiferencia.textContent = formatCurrency(diferencia);
+        }
+    }
 }
 
 // ==================== IRPF CALCULATOR - ARAGÓN 2025 ====================

@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v79 -->
+<!-- Updated: 2025-07-28-v80 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1819,6 +1819,49 @@
             <p style="font-weight: 600; margin-bottom: 16px;">🏦 Desglose por Banco</p>
             <div id="dashboard-banks-breakdown">
                 <p style="color: var(--text-secondary); text-align: center; padding: 20px;">No hay bancos configurados</p>
+            </div>
+        </div>
+        
+        <!-- Widget de Verificación de Balance -->
+        <div class="card" style="margin-bottom: 16px; border: 1px solid var(--success);">
+            <p style="font-weight: 600; margin-bottom: 16px;">✅ Verificación de Balance</p>
+            <div id="balance-verification-widget">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Suma de distribuciones -->
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-input); border-radius: 8px;">
+                        <span style="color: var(--text-secondary);">💰 Ahorro</span>
+                        <span id="verify-ahorro" style="color: var(--success);">0,00 €</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-input); border-radius: 8px;">
+                        <span style="color: var(--text-secondary);">💵 Dinero Disponible</span>
+                        <span id="verify-disponible" style="color: var(--success);">0,00 €</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-input); border-radius: 8px;">
+                        <span style="color: var(--text-secondary);">🏦 Total Bancos</span>
+                        <span id="verify-bancos" style="color: var(--success);">0,00 €</span>
+                    </div>
+                    
+                    <!-- Línea separadora -->
+                    <div style="border-top: 1px dashed var(--text-secondary); margin: 4px 0;"></div>
+                    
+                    <!-- Total distribuido -->
+                    <div style="display: flex; justify-content: space-between; padding: 10px 12px; background: var(--bg-input); border-radius: 8px;">
+                        <span style="font-weight: 600;">= Total Distribuido</span>
+                        <span id="verify-total-distribuido" style="font-weight: 600; color: var(--purple);">0,00 €</span>
+                    </div>
+                    
+                    <!-- Líquido a percibir -->
+                    <div style="display: flex; justify-content: space-between; padding: 10px 12px; background: var(--bg-input); border-radius: 8px;">
+                        <span style="font-weight: 600;">- Líquido Nómina</span>
+                        <span id="verify-liquido" style="font-weight: 600; color: var(--warning);">0,00 €</span>
+                    </div>
+                    
+                    <!-- Diferencia -->
+                    <div style="display: flex; justify-content: space-between; padding: 12px; background: var(--bg-card); border-radius: 8px; border: 2px solid var(--success);" id="verify-diferencia-container">
+                        <span style="font-weight: 700;">Diferencia</span>
+                        <span id="verify-diferencia" style="font-weight: 700; color: var(--success);">0,00 €</span>
+                    </div>
+                </div>
             </div>
         </div>
         
