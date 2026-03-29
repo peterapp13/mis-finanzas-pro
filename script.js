@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v64
+// Version: 2025-07-28-v65
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -8,10 +8,11 @@ const SAVINGS_FUND_KEY = 'mis-finanzas-pro-savings-fund';
 const SAVINGS_HISTORY_KEY = 'mis-finanzas-pro-savings-history';
 const PIN_KEY = 'app_security_pin';
 const LAST_UPDATE_KEY = 'finanzas_last_update';
+const EXTRAS_STORAGE_KEY = 'mis-finanzas-extras';
 
-// ==================== GLOBAL SESSION STATE (In-Memory) ====================
-// Esta variable se resetea al cerrar la app (no se guarda en localStorage)
-let sessionViewYear = new Date().getFullYear(); // Año visualizado actualmente en la sesión
+// ==================== ESTADO GLOBAL (Single Source of Truth) ====================
+// Esta es la ÚNICA variable que determina el año de análisis en toda la app
+let anioGlobalActivo = new Date().getFullYear();
 
 // ==================== PIN SECURITY SYSTEM ====================
 let currentPinInput = '';
@@ -138,7 +139,7 @@ function verifyPin() {
         currentPinInput = '';
         
         // Inicializar año de sesión al año actual al desbloquear
-        sessionViewYear = new Date().getFullYear();
+        anioGlobalActivo = new Date().getFullYear();
         syncAllYearSelectors();
     } else {
         // Wrong PIN
@@ -162,7 +163,7 @@ function syncAllYearSelectors() {
     selectors.forEach(id => {
         const select = document.getElementById(id);
         if (select) {
-            select.value = sessionViewYear;
+            select.value = anioGlobalActivo;
         }
     });
 }
@@ -213,7 +214,26 @@ function hideHardResetModal() {
 }
 
 function executeHardReset() {
-    // Clear ALL localStorage data
+    // Clear ALL localStorage data including Extras
+    // Lista explícita de todas las claves usadas por la app
+    const keysToDelete = [
+        STORAGE_KEY,           // mis-finanzas-pro-data
+        BANKS_KEY,             // mis-finanzas-pro-banks
+        EXPENSES_KEY,          // mis-finanzas-pro-expenses
+        LOANS_KEY,             // mis-finanzas-pro-loans
+        SAVINGS_FUND_KEY,      // mis-finanzas-pro-savings-fund
+        SAVINGS_HISTORY_KEY,   // mis-finanzas-pro-savings-history
+        PIN_KEY,               // app_security_pin
+        LAST_UPDATE_KEY,       // finanzas_last_update
+        EXTRAS_STORAGE_KEY,    // mis-finanzas-extras
+        'mis-finanzas-percentages' // Porcentajes guardados
+    ];
+    
+    keysToDelete.forEach(key => {
+        localStorage.removeItem(key);
+    });
+    
+    // Limpiar CUALQUIER otra clave que pueda quedar
     localStorage.clear();
     
     // Reload the page - app will detect no PIN and show setup screen
@@ -1625,7 +1645,7 @@ function onDashboardUpdateClick() {
     const selectedYear = parseInt(yearSelect.value);
     
     // Actualizar el año de sesión global
-    sessionViewYear = selectedYear;
+    anioGlobalActivo = selectedYear;
     
     // Sincronizar todos los selectores de año
     syncAllYearSelectors();
@@ -3082,9 +3102,7 @@ function deleteAllData() {
 }
 
 // ==================== MÓDULO EXTRAS (RENDIMIENTOS DEL CAPITAL) ====================
-const EXTRAS_STORAGE_KEY = 'mis-finanzas-extras';
 const IRPF_CAPITAL = 0.19; // 19% fijo para rendimientos del capital mobiliario
-let extrasSelectedYear = new Date().getFullYear(); // Año seleccionado para filtrar extras
 
 // Obtener extras del localStorage
 function getExtras() {
@@ -3149,9 +3167,8 @@ function initExtrasYearDropdown() {
         yearSelect.appendChild(option);
     });
     
-    // Actualizar la variable global con el año de sesión o actual
-    extrasSelectedYear = sessionViewYear || currentYear;
-    yearSelect.value = extrasSelectedYear.toString();
+    // Sincronizar con el año global activo
+    yearSelect.value = anioGlobalActivo.toString();
     
     console.log('Extras year dropdown initialized with', yearSelect.options.length, 'options');
 }
@@ -3302,20 +3319,22 @@ function eliminarExtra(id) {
 
 // ==================== RENDER FUNCTIONS ====================
 
-// Actualizar vista de Extras (llamado por botón "Actualizar")
+// Actualizar vista de Extras (llamado por botón "Actualizar" de Extras)
 function actualizarExtrasVista() {
+    // Leer el año del selector de Extras y actualizar anioGlobalActivo
     const yearSelect = document.getElementById('extras-year');
     
     if (yearSelect && yearSelect.value) {
-        extrasSelectedYear = parseInt(yearSelect.value) || new Date().getFullYear();
-    } else {
-        extrasSelectedYear = new Date().getFullYear();
+        anioGlobalActivo = parseInt(yearSelect.value) || new Date().getFullYear();
     }
+    
+    // Sincronizar todos los selectores
+    syncAllYearSelectors();
     
     renderExtrasList();
 }
 
-// Renderizar lista de extras
+// Renderizar lista de extras (usa anioGlobalActivo)
 function renderExtrasList() {
     const container = document.getElementById('extras-list');
     const summaryYear = document.getElementById('extras-summary-year');
@@ -3328,15 +3347,18 @@ function renderExtrasList() {
     
     const allExtras = getExtras() || [];
     
-    // Filtrar por año seleccionado
+    // USAR anioGlobalActivo como fuente de verdad
+    const yearToFilter = anioGlobalActivo;
+    
+    // Filtrar por año global activo
     const extras = allExtras.filter(extra => {
         if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
-        return extraYear === extrasSelectedYear;
+        return extraYear === yearToFilter;
     });
     
     // Actualizar resumen
-    if (summaryYear) summaryYear.textContent = extrasSelectedYear;
+    if (summaryYear) summaryYear.textContent = yearToFilter;
     if (countEl) countEl.textContent = extras.length;
     
     // Calcular totales
@@ -3359,7 +3381,7 @@ function renderExtrasList() {
         container.innerHTML = `
             <div style="padding: 40px 20px; text-align: center;">
                 <svg width="48" height="48" fill="var(--text-secondary)" style="opacity: 0.3; margin-bottom: 12px;" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
-                <p style="color: var(--text-secondary); font-size: 14px;">No hay registros en ${extrasSelectedYear}</p>
+                <p style="color: var(--text-secondary); font-size: 14px;">No hay registros en ${yearToFilter}</p>
                 <p style="color: var(--text-secondary); font-size: 12px; opacity: 0.7;">Pulsa el botón (+) para añadir</p>
             </div>
         `;
@@ -3408,27 +3430,18 @@ function renderExtrasHistorial() {
     actualizarExtrasVista();
 }
 
-// Actualizar widget de Extras en el Dashboard (filtrado por año del Dashboard)
+// Actualizar widget de Extras en el Dashboard (filtrado por anioGlobalActivo)
 function updateExtrasDashboard() {
     const allExtras = getExtras() || [];
     
-    // Obtener el año seleccionado del Dashboard directamente del selector
-    const dashboardYearSelect = document.getElementById('dashboard-year');
-    let dashboardYear = new Date().getFullYear(); // Default al año actual
+    // USAR SOLO anioGlobalActivo como fuente de verdad
+    const yearToFilter = anioGlobalActivo;
     
-    // SIEMPRE usar el valor del selector si está disponible
-    if (dashboardYearSelect && dashboardYearSelect.value) {
-        const parsedYear = parseInt(dashboardYearSelect.value);
-        if (!isNaN(parsedYear)) {
-            dashboardYear = parsedYear;
-        }
-    }
-    
-    // Filtrar por año del Dashboard
+    // Filtrar extras por año global activo
     const extras = allExtras.filter(extra => {
         if (!extra || !extra.fecha) return false;
         const extraYear = new Date(extra.fecha).getFullYear();
-        return extraYear === dashboardYear;
+        return extraYear === yearToFilter;
     });
     
     let totalBruto = 0;
@@ -3443,9 +3456,9 @@ function updateExtrasDashboard() {
     
     // Actualizar año mostrado en el widget
     const yearLabel = document.getElementById('extras-dashboard-year');
-    if (yearLabel) yearLabel.textContent = dashboardYear;
+    if (yearLabel) yearLabel.textContent = yearToFilter;
     
-    // Actualizar valores (graceful handling si no existen los elementos)
+    // Actualizar valores
     const brutoEl = document.getElementById('extras-bruto-total');
     const irpfEl = document.getElementById('extras-irpf-total');
     const netoEl = document.getElementById('extras-neto-total');
