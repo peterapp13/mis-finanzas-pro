@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v58
+// Version: 2025-07-28-v59
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1729,6 +1729,9 @@ function updateDashboard() {
     
     // Update savings fund
     updateSavingsFundDisplay();
+    
+    // Update Extras widget to match the selected year
+    updateExtrasDashboard();
 }
 
 function updateRuleStatus(category, actual, target) {
@@ -3054,12 +3057,16 @@ function saveExtras(extras) {
 // Inicializar dropdown de años para Extras
 function initExtrasYearDropdown() {
     const yearSelect = document.getElementById('extras-year');
-    if (!yearSelect) return;
+    if (!yearSelect) {
+        console.error('Extras year select not found');
+        return;
+    }
     
     const currentYear = new Date().getFullYear();
     const startYear = 2020;
     const endYear = 2045;
     
+    // Limpiar opciones existentes
     yearSelect.innerHTML = '';
     
     // Poblar años en orden descendente (más reciente primero)
@@ -3067,9 +3074,12 @@ function initExtrasYearDropdown() {
         const option = document.createElement('option');
         option.value = year;
         option.textContent = year;
-        if (year === extrasSelectedYear) option.selected = true;
+        if (year === currentYear) option.selected = true; // Seleccionar año actual por defecto
         yearSelect.appendChild(option);
     }
+    
+    // Actualizar la variable global
+    extrasSelectedYear = currentYear;
 }
 
 // Calcular preview al escribir el bruto
@@ -3149,17 +3159,10 @@ function eliminarExtra(id) {
 
 // Renderizar historial de extras (filtrado por año)
 function renderExtrasHistorial() {
-    // Sincronizar con el año del Dashboard primero
-    const dashboardYearSelect = document.getElementById('dashboard-year');
     const extrasYearSelect = document.getElementById('extras-year');
     
-    if (dashboardYearSelect && extrasYearSelect) {
-        // Sincronizar el selector de Extras con el del Dashboard
-        extrasYearSelect.value = dashboardYearSelect.value;
-    }
-    
-    // Usar el año del selector de Extras (ya sincronizado)
-    if (extrasYearSelect) {
+    // Usar el año del selector de Extras (independiente del Dashboard)
+    if (extrasYearSelect && extrasYearSelect.value) {
         extrasSelectedYear = parseInt(extrasYearSelect.value) || new Date().getFullYear();
     } else {
         extrasSelectedYear = new Date().getFullYear();
@@ -3235,9 +3238,13 @@ function renderExtrasHistorial() {
 function updateExtrasDashboard() {
     const allExtras = getExtras() || []; // Graceful fallback
     
-    // Obtener el año seleccionado del Dashboard (si existe)
+    // Obtener el año seleccionado del Dashboard
     const dashboardYearSelect = document.getElementById('dashboard-year');
-    const dashboardYear = dashboardYearSelect ? parseInt(dashboardYearSelect.value) : new Date().getFullYear();
+    let dashboardYear = new Date().getFullYear(); // Default al año actual
+    
+    if (dashboardYearSelect && dashboardYearSelect.value && !isNaN(parseInt(dashboardYearSelect.value))) {
+        dashboardYear = parseInt(dashboardYearSelect.value);
+    }
     
     // Filtrar por año del Dashboard
     const extras = allExtras.filter(extra => {
