@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v59
+// Version: 2025-07-28-v60
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -3074,7 +3074,7 @@ function initExtrasYearDropdown() {
         const option = document.createElement('option');
         option.value = year;
         option.textContent = year;
-        if (year === currentYear) option.selected = true; // Seleccionar año actual por defecto
+        if (year === currentYear) option.selected = true;
         yearSelect.appendChild(option);
     }
     
@@ -3082,21 +3082,76 @@ function initExtrasYearDropdown() {
     extrasSelectedYear = currentYear;
 }
 
+// ==================== MODAL FUNCTIONS ====================
+
+// Abrir modal para crear/editar
+function abrirModalExtra(editId = null) {
+    const modal = document.getElementById('modal-extra-overlay');
+    const title = document.getElementById('modal-extra-title');
+    const editIdInput = document.getElementById('extra-edit-id');
+    
+    if (editId) {
+        // Modo edición
+        title.textContent = 'Editar Ingreso Extra';
+        editIdInput.value = editId;
+        
+        const extras = getExtras();
+        const extra = extras.find(e => e.id === editId);
+        
+        if (extra) {
+            document.getElementById('extra-fecha').value = extra.fecha;
+            document.getElementById('extra-concepto').value = extra.concepto;
+            document.getElementById('extra-bruto').value = extra.bruto;
+            calcularExtraPreview();
+        }
+    } else {
+        // Modo creación
+        title.textContent = 'Nuevo Ingreso Extra';
+        editIdInput.value = '';
+        
+        // Limpiar formulario
+        document.getElementById('extra-fecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('extra-concepto').value = '';
+        document.getElementById('extra-bruto').value = '';
+        calcularExtraPreview();
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+// Cerrar modal
+function cerrarModalExtra(event) {
+    if (event && event.target !== event.currentTarget) return;
+    
+    const modal = document.getElementById('modal-extra-overlay');
+    modal.classList.add('hidden');
+}
+
 // Calcular preview al escribir el bruto
 function calcularExtraPreview() {
-    const bruto = parseFloat(document.getElementById('extra-bruto').value) || 0;
+    const brutoInput = document.getElementById('extra-bruto');
+    const bruto = brutoInput ? (parseFloat(brutoInput.value) || 0) : 0;
     const irpf = bruto * IRPF_CAPITAL;
     const neto = bruto - irpf;
     
-    document.getElementById('extra-irpf-preview').textContent = formatCurrency(irpf);
-    document.getElementById('extra-neto-preview').textContent = formatCurrency(neto);
+    const irpfPreview = document.getElementById('extra-irpf-preview');
+    const netoPreview = document.getElementById('extra-neto-preview');
+    
+    if (irpfPreview) irpfPreview.textContent = formatCurrency(irpf);
+    if (netoPreview) netoPreview.textContent = formatCurrency(neto);
 }
 
-// Guardar nuevo extra
+// ==================== CRUD FUNCTIONS ====================
+
+// CREATE / UPDATE - Guardar extra
 function guardarExtra() {
+    const editId = document.getElementById('extra-edit-id').value;
     const fecha = document.getElementById('extra-fecha').value;
     const concepto = document.getElementById('extra-concepto').value.trim();
-    const bruto = parseFloat(document.getElementById('extra-bruto').value) || 0;
+    const brutoRaw = document.getElementById('extra-bruto').value;
+    
+    // Limpiar formato numérico
+    const bruto = parseFloat(brutoRaw.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
     
     if (!fecha) {
         alert('⚠️ Por favor, selecciona una fecha.');
@@ -3116,34 +3171,47 @@ function guardarExtra() {
     const irpf = bruto * IRPF_CAPITAL;
     const neto = bruto - irpf;
     
-    const nuevoExtra = {
-        id: Date.now().toString(),
-        fecha,
-        concepto,
-        bruto,
-        irpf,
-        neto,
-        createdAt: new Date().toISOString()
-    };
+    let extras = getExtras();
     
-    const extras = getExtras();
-    extras.push(nuevoExtra);
+    if (editId) {
+        // UPDATE - Editar existente
+        const index = extras.findIndex(e => e.id === editId);
+        if (index !== -1) {
+            extras[index] = {
+                ...extras[index],
+                fecha,
+                concepto,
+                bruto,
+                irpf,
+                neto,
+                updatedAt: new Date().toISOString()
+            };
+        }
+    } else {
+        // CREATE - Nuevo registro
+        const nuevoExtra = {
+            id: Date.now().toString(),
+            fecha,
+            concepto,
+            bruto,
+            irpf,
+            neto,
+            createdAt: new Date().toISOString()
+        };
+        extras.push(nuevoExtra);
+    }
+    
     saveExtras(extras);
     
-    // Limpiar formulario
-    document.getElementById('extra-fecha').value = '';
-    document.getElementById('extra-concepto').value = '';
-    document.getElementById('extra-bruto').value = '';
-    calcularExtraPreview();
+    // Cerrar modal
+    cerrarModalExtra();
     
     // Actualizar UI
-    renderExtrasHistorial();
+    actualizarExtrasVista();
     updateExtrasDashboard();
-    
-    alert('✅ Ingreso extra guardado correctamente.');
 }
 
-// Eliminar extra
+// DELETE - Eliminar extra
 function eliminarExtra(id) {
     if (!confirm('¿Estás seguro de que deseas eliminar este ingreso extra?')) {
         return;
@@ -3153,27 +3221,38 @@ function eliminarExtra(id) {
     extras = extras.filter(e => e.id !== id);
     saveExtras(extras);
     
-    renderExtrasHistorial();
+    // Actualizar UI
+    actualizarExtrasVista();
     updateExtrasDashboard();
 }
 
-// Renderizar historial de extras (filtrado por año)
-function renderExtrasHistorial() {
-    const extrasYearSelect = document.getElementById('extras-year');
+// ==================== RENDER FUNCTIONS ====================
+
+// Actualizar vista de Extras (llamado por botón "Actualizar")
+function actualizarExtrasVista() {
+    const yearSelect = document.getElementById('extras-year');
     
-    // Usar el año del selector de Extras (independiente del Dashboard)
-    if (extrasYearSelect && extrasYearSelect.value) {
-        extrasSelectedYear = parseInt(extrasYearSelect.value) || new Date().getFullYear();
+    if (yearSelect && yearSelect.value) {
+        extrasSelectedYear = parseInt(yearSelect.value) || new Date().getFullYear();
     } else {
         extrasSelectedYear = new Date().getFullYear();
     }
     
-    const allExtras = getExtras() || []; // Graceful fallback
-    const container = document.getElementById('extras-historial');
-    const totalesContainer = document.getElementById('extras-totales');
-    const totalesYearLabel = document.getElementById('extras-totales-year');
+    renderExtrasList();
+}
+
+// Renderizar lista de extras
+function renderExtrasList() {
+    const container = document.getElementById('extras-list');
+    const summaryYear = document.getElementById('extras-summary-year');
+    const countEl = document.getElementById('extras-count');
+    const totalBrutoEl = document.getElementById('extras-total-bruto');
+    const totalIrpfEl = document.getElementById('extras-total-irpf');
+    const totalNetoEl = document.getElementById('extras-total-neto');
     
-    if (!container || !totalesContainer) return; // Graceful exit si no existen elementos
+    if (!container) return;
+    
+    const allExtras = getExtras() || [];
     
     // Filtrar por año seleccionado
     const extras = allExtras.filter(extra => {
@@ -3182,16 +3261,11 @@ function renderExtrasHistorial() {
         return extraYear === extrasSelectedYear;
     });
     
-    if (extras.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-secondary); font-size: 13px; text-align: center; padding: 20px;">No hay ingresos extras registrados en ${extrasSelectedYear}</p>`;
-        totalesContainer.style.display = 'none';
-        return;
-    }
+    // Actualizar resumen
+    if (summaryYear) summaryYear.textContent = extrasSelectedYear;
+    if (countEl) countEl.textContent = extras.length;
     
-    // Ordenar por fecha (más reciente primero)
-    extras.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-    
-    let html = '';
+    // Calcular totales
     let totalBruto = 0;
     let totalIrpf = 0;
     let totalNeto = 0;
@@ -3200,7 +3274,30 @@ function renderExtrasHistorial() {
         totalBruto += extra.bruto || 0;
         totalIrpf += extra.irpf || 0;
         totalNeto += extra.neto || 0;
-        
+    });
+    
+    if (totalBrutoEl) totalBrutoEl.textContent = formatCurrency(totalBruto);
+    if (totalIrpfEl) totalIrpfEl.textContent = formatCurrency(totalIrpf);
+    if (totalNetoEl) totalNetoEl.textContent = formatCurrency(totalNeto);
+    
+    // Renderizar lista
+    if (extras.length === 0) {
+        container.innerHTML = `
+            <div style="padding: 40px 20px; text-align: center;">
+                <svg width="48" height="48" fill="var(--text-secondary)" style="opacity: 0.3; margin-bottom: 12px;" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
+                <p style="color: var(--text-secondary); font-size: 14px;">No hay registros en ${extrasSelectedYear}</p>
+                <p style="color: var(--text-secondary); font-size: 12px; opacity: 0.7;">Pulsa el botón (+) para añadir</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Ordenar por fecha (más reciente primero)
+    extras.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    
+    let html = '';
+    
+    extras.forEach(extra => {
         const fechaFormateada = new Date(extra.fecha).toLocaleDateString('es-ES', {
             day: '2-digit',
             month: 'short',
@@ -3208,39 +3305,42 @@ function renderExtrasHistorial() {
         });
         
         html += `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--bg-input);">
-                <div style="flex: 1;">
-                    <p style="font-size: 13px; font-weight: 500;">${extra.concepto || 'Sin concepto'}</p>
-                    <p style="font-size: 11px; color: var(--text-secondary);">${fechaFormateada}</p>
+            <div class="extras-item">
+                <div class="extras-item-info">
+                    <div class="extras-item-concept">${extra.concepto || 'Sin concepto'}</div>
+                    <div class="extras-item-date">${fechaFormateada}</div>
                 </div>
-                <div style="text-align: right; margin-right: 12px;">
-                    <p style="font-size: 13px; font-weight: 600; color: var(--primary);">${formatCurrency(extra.neto || 0)}</p>
-                    <p style="font-size: 10px; color: var(--text-secondary);">Bruto: ${formatCurrency(extra.bruto || 0)}</p>
+                <div class="extras-item-amounts">
+                    <div class="extras-item-neto">${formatCurrency(extra.neto || 0)}</div>
+                    <div class="extras-item-details">Bruto: ${formatCurrency(extra.bruto || 0)} | IRPF: ${formatCurrency(extra.irpf || 0)}</div>
                 </div>
-                <button onclick="eliminarExtra('${extra.id}')" style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 107, 107, 0.1); border: none; color: var(--danger); cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                </button>
+                <div class="extras-item-actions">
+                    <button class="extras-action-btn edit" onclick="abrirModalExtra('${extra.id}')" title="Editar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                    </button>
+                    <button class="extras-action-btn delete" onclick="eliminarExtra('${extra.id}')" title="Eliminar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                    </button>
+                </div>
             </div>
         `;
     });
     
     container.innerHTML = html;
-    
-    // Mostrar totales
-    if (totalesYearLabel) totalesYearLabel.textContent = extrasSelectedYear;
-    document.getElementById('extras-hist-bruto').textContent = formatCurrency(totalBruto);
-    document.getElementById('extras-hist-irpf').textContent = formatCurrency(totalIrpf);
-    document.getElementById('extras-hist-neto').textContent = formatCurrency(totalNeto);
-    totalesContainer.style.display = 'block';
+}
+
+// LEGACY: Mantener para compatibilidad (ahora llama a renderExtrasList)
+function renderExtrasHistorial() {
+    actualizarExtrasVista();
 }
 
 // Actualizar widget de Extras en el Dashboard (filtrado por año del Dashboard)
 function updateExtrasDashboard() {
-    const allExtras = getExtras() || []; // Graceful fallback
+    const allExtras = getExtras() || [];
     
     // Obtener el año seleccionado del Dashboard
     const dashboardYearSelect = document.getElementById('dashboard-year');
-    let dashboardYear = new Date().getFullYear(); // Default al año actual
+    let dashboardYear = new Date().getFullYear();
     
     if (dashboardYearSelect && dashboardYearSelect.value && !isNaN(parseInt(dashboardYearSelect.value))) {
         dashboardYear = parseInt(dashboardYearSelect.value);
@@ -3279,16 +3379,12 @@ function updateExtrasDashboard() {
 
 // Inicializar Extras al cargar la app
 function initExtras() {
-    // Establecer fecha de hoy por defecto
-    const hoy = new Date().toISOString().split('T')[0];
-    const fechaInput = document.getElementById('extra-fecha');
-    if (fechaInput) {
-        fechaInput.value = hoy;
-    }
-    
     // Inicializar selector de año
     initExtrasYearDropdown();
     
-    renderExtrasHistorial();
+    // Renderizar lista
+    actualizarExtrasVista();
+    
+    // Actualizar widget del Dashboard
     updateExtrasDashboard();
 }

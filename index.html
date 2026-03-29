@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v59 -->
+<!-- Updated: 2025-07-28-v60 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -650,6 +650,344 @@
             #historial-table th:last-child,
             #historial-table td:last-child {
                 display: none !important;
+            }
+        }
+        
+        /* ==================== EXTRAS MODULE STYLES ==================== */
+        
+        /* FAB (Floating Action Button) */
+        .extras-fab {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--purple), #9333ea);
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .extras-fab:active {
+            transform: scale(0.95);
+        }
+        
+        @media (min-width: 768px) {
+            .extras-fab {
+                bottom: 110px;
+                right: 30px;
+                width: 64px;
+                height: 64px;
+            }
+        }
+        
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 16px;
+        }
+        
+        .modal-overlay.hidden {
+            display: none !important;
+        }
+        
+        /* Modal Content */
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideUp 0.3s ease;
+        }
+        
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--bg-input);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-close-btn:hover {
+            background: var(--bg-input);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px 20px;
+            border-top: 1px solid var(--bg-input);
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            background: var(--bg-input);
+            border: 1px solid transparent;
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--purple);
+        }
+        
+        /* Preview Styles */
+        .extras-preview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 8px;
+        }
+        
+        .preview-item {
+            text-align: center;
+        }
+        
+        .preview-label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .preview-value {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .preview-value.danger {
+            color: var(--danger);
+        }
+        
+        .preview-value.success {
+            color: var(--primary);
+        }
+        
+        /* Button Styles */
+        .btn-primary {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            background: var(--purple);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .btn-primary:active {
+            opacity: 0.8;
+        }
+        
+        .btn-secondary {
+            flex: 1;
+            padding: 14px 20px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--bg-input);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        /* Extras List Item (Card Style - Responsive) */
+        .extras-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--bg-input);
+            gap: 12px;
+        }
+        
+        .extras-item:last-child {
+            border-bottom: none;
+        }
+        
+        .extras-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .extras-item-concept {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        
+        .extras-item-date {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .extras-item-amounts {
+            text-align: right;
+            flex-shrink: 0;
+        }
+        
+        .extras-item-neto {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .extras-item-details {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        
+        .extras-item-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        
+        .extras-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+        
+        .extras-action-btn:active {
+            opacity: 0.7;
+        }
+        
+        .extras-action-btn.edit {
+            background: rgba(108, 92, 231, 0.15);
+            color: var(--purple);
+        }
+        
+        .extras-action-btn.delete {
+            background: rgba(255, 107, 107, 0.15);
+            color: var(--danger);
+        }
+        
+        /* Responsive: Mobile Card View */
+        @media (max-width: 400px) {
+            .extras-item {
+                flex-wrap: wrap;
+            }
+            
+            .extras-item-info {
+                width: 100%;
+                order: 1;
+            }
+            
+            .extras-item-amounts {
+                order: 2;
+                text-align: left;
+                flex: 1;
+            }
+            
+            .extras-item-actions {
+                order: 3;
+            }
+        }
+        
+        /* iPad Styles */
+        @media (min-width: 768px) {
+            .extras-modal {
+                max-width: 500px;
+            }
+            
+            .extras-item {
+                padding: 16px 20px;
+            }
+            
+            .extras-item-concept {
+                font-size: 15px;
+            }
+            
+            .extras-item-neto {
+                font-size: 17px;
             }
         }
     </style>
@@ -1562,78 +1900,119 @@
         <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Extras</h1>
         <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">Rendimientos del Capital Mobiliario</p>
         
-        <!-- Form Card -->
+        <!-- Selector de Año + Botón Actualizar -->
         <div class="card" style="margin-bottom: 16px;">
-            <p style="font-weight: 600; margin-bottom: 12px;">Nuevo Ingreso Extraordinario</p>
-            
-            <div style="display: grid; gap: 12px;">
-                <!-- Fecha -->
-                <div>
-                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Fecha</label>
-                    <input type="date" id="extra-fecha" style="width: 100%; padding: 12px; border-radius: 10px; background: var(--bg-input); border: none; color: var(--text-primary); font-size: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Año</label>
+                    <select id="extras-year" style="width: 100%; padding: 10px 12px; border-radius: 8px; background: var(--bg-input); border: none; color: var(--text-primary); font-size: 14px; font-weight: 600; cursor: pointer;">
+                        <!-- Populated by JS -->
+                    </select>
                 </div>
-                
-                <!-- Concepto -->
-                <div>
-                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Concepto</label>
-                    <input type="text" id="extra-concepto" placeholder="Ej: Regalo Santander domiciliar nómina" style="width: 100%; padding: 12px; border-radius: 10px; background: var(--bg-input); border: none; color: var(--text-primary); font-size: 14px;">
-                </div>
-                
-                <!-- Importe Bruto -->
-                <div>
-                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Importe Bruto (€)</label>
-                    <input type="number" inputmode="decimal" id="extra-bruto" placeholder="0.00" step="0.01" oninput="calcularExtraPreview()" style="width: 100%; padding: 12px; border-radius: 10px; background: var(--bg-input); border: none; color: var(--text-primary); font-size: 14px;">
-                </div>
-                
-                <!-- Preview Cálculo -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: var(--bg-input); border-radius: 10px; padding: 12px;">
-                    <div>
-                        <p style="font-size: 10px; color: var(--text-secondary);">IRPF (19%)</p>
-                        <p id="extra-irpf-preview" style="font-size: 16px; font-weight: 600; color: var(--danger);">0,00 €</p>
-                    </div>
-                    <div>
-                        <p style="font-size: 10px; color: var(--text-secondary);">Neto a Recibir</p>
-                        <p id="extra-neto-preview" style="font-size: 16px; font-weight: 600; color: var(--primary);">0,00 €</p>
-                    </div>
-                </div>
-                
-                <!-- Botón Guardar -->
-                <button onclick="guardarExtra()" style="width: 100%; padding: 14px; border-radius: 12px; background: var(--purple); border: none; color: white; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/></svg>
-                    Guardar Extra
+                <button onclick="actualizarExtrasVista()" style="height: 42px; margin-top: 15px; padding: 0 20px; background: var(--purple); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+                    Actualizar
                 </button>
             </div>
         </div>
         
-        <!-- Historial de Extras -->
-        <div class="card">
-            <!-- Selector de Año -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <p style="font-weight: 600;">Historial de Ingresos Extras</p>
-                <select id="extras-year" onchange="renderExtrasHistorial()" style="padding: 8px 12px; border-radius: 8px; background: var(--bg-input); border: none; color: var(--text-primary); font-size: 14px; font-weight: 600; cursor: pointer;">
-                    <!-- Populated by JS -->
-                </select>
+        <!-- Resumen del Año -->
+        <div class="card extras-summary-card" style="margin-bottom: 16px; border: 1px solid var(--purple); background: linear-gradient(135deg, rgba(108, 92, 231, 0.08), transparent);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--purple); display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
+                </div>
+                <div>
+                    <p style="font-weight: 600; font-size: 15px;">Resumen <span id="extras-summary-year">2026</span></p>
+                    <p style="font-size: 11px; color: var(--text-secondary);"><span id="extras-count">0</span> registros</p>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <div style="background: var(--bg-input); border-radius: 10px; padding: 10px; text-align: center;">
+                    <p style="color: var(--text-secondary); font-size: 10px; margin-bottom: 2px;">Bruto</p>
+                    <p id="extras-total-bruto" style="font-size: 14px; font-weight: 700; color: var(--text-primary);">0,00 €</p>
+                </div>
+                <div style="background: var(--bg-input); border-radius: 10px; padding: 10px; text-align: center;">
+                    <p style="color: var(--text-secondary); font-size: 10px; margin-bottom: 2px;">IRPF 19%</p>
+                    <p id="extras-total-irpf" style="font-size: 14px; font-weight: 700; color: var(--danger);">0,00 €</p>
+                </div>
+                <div style="background: var(--bg-input); border-radius: 10px; padding: 10px; text-align: center;">
+                    <p style="color: var(--text-secondary); font-size: 10px; margin-bottom: 2px;">Neto</p>
+                    <p id="extras-total-neto" style="font-size: 14px; font-weight: 700; color: var(--primary);">0,00 €</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lista de Extras (Formato Tarjeta Responsive) -->
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 16px; border-bottom: 1px solid var(--bg-input);">
+                <p style="font-weight: 600;">Historial de Ingresos</p>
+            </div>
+            <div id="extras-list" style="max-height: 400px; overflow-y: auto;">
+                <div style="padding: 40px 20px; text-align: center;">
+                    <svg width="48" height="48" fill="var(--text-secondary)" style="opacity: 0.3; margin-bottom: 12px;" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/></svg>
+                    <p style="color: var(--text-secondary); font-size: 14px;">No hay registros</p>
+                    <p style="color: var(--text-secondary); font-size: 12px; opacity: 0.7;">Pulsa el botón (+) para añadir</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FAB (Floating Action Button) -->
+        <button id="extras-fab" onclick="abrirModalExtra()" class="extras-fab">
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+        </button>
+    </div>
+    
+    <!-- Modal Extras (Create/Edit) -->
+    <div id="modal-extra-overlay" class="modal-overlay hidden" onclick="cerrarModalExtra(event)">
+        <div class="modal-content extras-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modal-extra-title">Nuevo Ingreso Extra</h3>
+                <button onclick="cerrarModalExtra()" class="modal-close-btn">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                </button>
             </div>
             
-            <div id="extras-historial" style="max-height: 300px; overflow-y: auto;">
-                <p style="color: var(--text-secondary); font-size: 13px; text-align: center; padding: 20px;">No hay ingresos extras registrados</p>
+            <div class="modal-body">
+                <input type="hidden" id="extra-edit-id" value="">
+                
+                <!-- Fecha -->
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="extra-fecha" class="form-input">
+                </div>
+                
+                <!-- Concepto -->
+                <div class="form-group">
+                    <label>Concepto</label>
+                    <input type="text" id="extra-concepto" placeholder="Ej: Regalo Santander, Intereses..." class="form-input">
+                </div>
+                
+                <!-- Importe Bruto -->
+                <div class="form-group">
+                    <label>Importe Bruto (€)</label>
+                    <input type="number" inputmode="decimal" id="extra-bruto" placeholder="0.00" step="0.01" oninput="calcularExtraPreview()" class="form-input">
+                </div>
+                
+                <!-- Preview Cálculo -->
+                <div class="extras-preview">
+                    <div class="preview-item">
+                        <span class="preview-label">IRPF (19%)</span>
+                        <span id="extra-irpf-preview" class="preview-value danger">0,00 €</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Neto a Recibir</span>
+                        <span id="extra-neto-preview" class="preview-value success">0,00 €</span>
+                    </div>
+                </div>
             </div>
             
-            <!-- Totales del año -->
-            <div id="extras-totales" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bg-input);">
-                <p style="font-size: 11px; color: var(--purple); margin-bottom: 8px; font-weight: 600;">TOTALES <span id="extras-totales-year"></span></p>
-                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-                    <span style="color: var(--text-secondary);">Total Bruto:</span>
-                    <span id="extras-hist-bruto" style="font-weight: 600;">0,00 €</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-                    <span style="color: var(--text-secondary);">Total IRPF:</span>
-                    <span id="extras-hist-irpf" style="font-weight: 600; color: var(--danger);">0,00 €</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 13px;">
-                    <span style="color: var(--text-secondary);">Total Neto:</span>
-                    <span id="extras-hist-neto" style="font-weight: 600; color: var(--primary);">0,00 €</span>
-                </div>
+            <div class="modal-footer">
+                <button onclick="cerrarModalExtra()" class="btn-secondary">Cancelar</button>
+                <button onclick="guardarExtra()" class="btn-primary">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    Guardar
+                </button>
             </div>
         </div>
     </div>
