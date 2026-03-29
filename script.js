@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v62
+// Version: 2025-07-28-v63
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -3093,28 +3093,48 @@ function initExtrasYearDropdown() {
         return;
     }
     
-    // Si ya tiene opciones, no reinicializar
-    if (yearSelect.options.length > 0) {
-        return;
+    const currentYear = new Date().getFullYear();
+    const baseStartYear = 2020;
+    const baseEndYear = 2045;
+    
+    // Obtener años de los datos existentes
+    const allExtras = getExtras() || [];
+    const dataYears = new Set();
+    
+    allExtras.forEach(extra => {
+        if (extra && extra.fecha) {
+            const year = new Date(extra.fecha).getFullYear();
+            dataYears.add(year);
+        }
+    });
+    
+    // Crear conjunto de todos los años (base + datos)
+    const allYears = new Set();
+    
+    // Añadir rango base 2020-2045
+    for (let year = baseStartYear; year <= baseEndYear; year++) {
+        allYears.add(year);
     }
     
-    const currentYear = new Date().getFullYear();
-    const startYear = 2020;
-    const endYear = 2045;
+    // Añadir años de los datos (por si hay fuera del rango base)
+    dataYears.forEach(year => allYears.add(year));
+    
+    // Convertir a array y ordenar descendente
+    const sortedYears = Array.from(allYears).sort((a, b) => b - a);
     
     // Limpiar opciones existentes
     yearSelect.innerHTML = '';
     
-    // Poblar años en orden descendente (más reciente primero)
-    for (let year = endYear; year >= startYear; year--) {
+    // Poblar años
+    sortedYears.forEach(year => {
         const option = document.createElement('option');
         option.value = year.toString();
         option.textContent = year.toString();
         if (year === currentYear) option.selected = true;
         yearSelect.appendChild(option);
-    }
+    });
     
-    // Actualizar la variable global con el año de sesión
+    // Actualizar la variable global con el año de sesión o actual
     extrasSelectedYear = sessionViewYear || currentYear;
     yearSelect.value = extrasSelectedYear.toString();
     
