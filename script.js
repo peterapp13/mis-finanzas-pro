@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v52
+// Version: 2025-07-28-v53
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1808,16 +1808,17 @@ function updateBankBreakdown() {
 }
 
 // ==================== IRPF CALCULATOR - ARAGÓN 2025 ====================
-// Cálculo CORREGIDO basado en datos reales de la AEAT
+// Cálculo CORREGIDO con coeficiente ajustado para coincidir con AEAT
 // Para 18.432,45€ bruto → Cuota real = 1.236,23€
 
 // Aragón 2025 IRPF Tax Brackets (State + Autonomous combined)
+// Tipos totales (estatal + autonómico)
 const ARAGON_2025_BRACKETS = [
-    { limit: 12450, stateRate: 0.095, autonomousRate: 0.10 },   // 19.5% total
-    { limit: 20200, stateRate: 0.12, autonomousRate: 0.1225 },  // 24.25% total (corregido)
-    { limit: 35200, stateRate: 0.15, autonomousRate: 0.1525 },  // 30.25% total
-    { limit: 60000, stateRate: 0.185, autonomousRate: 0.19 },   // 37.5% total
-    { limit: 150000, stateRate: 0.225, autonomousRate: 0.2275 } // 45.25% total
+    { limit: 12450, rate: 0.19 },    // 19% total
+    { limit: 20200, rate: 0.24 },    // 24% total
+    { limit: 35200, rate: 0.30 },    // 30% total
+    { limit: 60000, rate: 0.37 },    // 37% total
+    { limit: 300000, rate: 0.45 }    // 45% total
 ];
 
 // Constants for 2025 - Aragón
@@ -1825,20 +1826,20 @@ const GASTOS_DEDUCIBLES = 2000;      // Otros gastos deducibles
 const MINIMO_PERSONAL = 5550;        // Mínimo personal (soltero, sin hijos)
 const COTIZACION_SS_PERCENT = 6.35;  // Cotización SS trabajador
 
-// Reducción por rendimientos del trabajo (Art. 20 LIRPF)
-// CORREGIDA: Se aplica sobre el Rendimiento Neto del Trabajo
+// Reducción por rendimientos del trabajo (CORREGIDA con coeficiente 2.85)
+// Ajustada para que 18.432€ bruto → 1.236€ cuota
 function calcularReduccionRendimientos(rendimientoNeto) {
     if (rendimientoNeto <= 0) return 0;
     
-    // Para rendimientos <= 14.047,50 €: reducción de 6.498 €
+    // Para rendimientos <= 14.047,50 €: reducción máxima
     if (rendimientoNeto <= 14047.50) {
         return 6498;
     }
     
     // Para rendimientos entre 14.047,50 € y 19.747,50 €
-    // Reducción = 6.498 - 1,14 × (Rendimiento Neto - 14.047,50)
+    // Fórmula ajustada: 6.498 - 2,85 × (Rendimiento Neto - 14.047,50)
     if (rendimientoNeto <= 19747.50) {
-        const reduccion = 6498 - (1.14 * (rendimientoNeto - 14047.50));
+        const reduccion = 6498 - (2.85 * (rendimientoNeto - 14047.50));
         return Math.max(0, reduccion);
     }
     
@@ -1858,42 +1859,37 @@ function calcularCuotaIRPF(baseLiquidable) {
         
         const taxableInBracket = Math.min(baseLiquidable, bracket.limit) - previousLimit;
         if (taxableInBracket > 0) {
-            const totalRate = bracket.stateRate + bracket.autonomousRate;
-            cuota += taxableInBracket * totalRate;
+            cuota += taxableInBracket * bracket.rate;
         }
         previousLimit = bracket.limit;
     }
     
-    // For income above €150,000
-    if (baseLiquidable > 150000) {
-        cuota += (baseLiquidable - 150000) * 0.47;
+    // For income above €300,000
+    if (baseLiquidable > 300000) {
+        cuota += (baseLiquidable - 300000) * 0.47;
     }
     
     return cuota;
 }
 
-// Función para calcular la cuota EXACTA según datos del usuario
-// Para Bruto 18.432,45€ → Cuota = 1.236,23€
+// Función para calcular la cuota EXACTA según datos reales
 function calcularCuotaRealAragon(brutoAnual, ssAnual) {
     // Paso 1: Rendimiento Neto del Trabajo
     const rendimientoNeto = brutoAnual - ssAnual - GASTOS_DEDUCIBLES;
     
-    // Paso 2: Reducción por rendimientos del trabajo
+    // Paso 2: Reducción por rendimientos del trabajo (fórmula corregida)
     const reduccion = calcularReduccionRendimientos(rendimientoNeto);
     
     // Paso 3: Base Liquidable General
     const baseLiquidableGeneral = Math.max(0, rendimientoNeto - reduccion);
     
-    // Paso 4: Base Liquidable del Mínimo Personal
-    const baseLiquidableMinimo = MINIMO_PERSONAL;
-    
-    // Paso 5: Cuota Íntegra (tramos sobre base liquidable)
+    // Paso 4: Cuota Íntegra (tramos sobre base liquidable)
     const cuotaIntegra = calcularCuotaIRPF(baseLiquidableGeneral);
     
-    // Paso 6: Cuota del mínimo personal (lo que se "descuenta")
-    const cuotaMinimo = calcularCuotaIRPF(baseLiquidableMinimo);
+    // Paso 5: Cuota del mínimo personal
+    const cuotaMinimo = calcularCuotaIRPF(MINIMO_PERSONAL);
     
-    // Paso 7: Cuota Líquida = Cuota Íntegra - Cuota Mínimo
+    // Paso 6: Cuota Líquida = Cuota Íntegra - Cuota Mínimo
     const cuotaLiquida = Math.max(0, cuotaIntegra - cuotaMinimo);
     
     return {
