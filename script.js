@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v66
+// Version: 2025-07-28-v67
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1583,6 +1583,9 @@ function initDashboardSelectors() {
     
     // SIEMPRE inicializar con el año actual
     populateYearDropdown(yearSelect, currentYear);
+    
+    // IMPORTANTE: Sincronizar variable interna anioDashboard con el selector
+    anioDashboard = currentYear;
     
     // Populate months for current year
     updateDashboardMonthsForYear(currentYear);
