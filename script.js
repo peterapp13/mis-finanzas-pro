@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v60
+// Version: 2025-07-28-v61
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -7,6 +7,11 @@ const LOANS_KEY = 'mis-finanzas-pro-loans';
 const SAVINGS_FUND_KEY = 'mis-finanzas-pro-savings-fund';
 const SAVINGS_HISTORY_KEY = 'mis-finanzas-pro-savings-history';
 const PIN_KEY = 'app_security_pin';
+const LAST_UPDATE_KEY = 'finanzas_last_update';
+
+// ==================== GLOBAL SESSION STATE (In-Memory) ====================
+// Esta variable se resetea al cerrar la app (no se guarda en localStorage)
+let sessionViewYear = new Date().getFullYear(); // Año visualizado actualmente en la sesión
 
 // ==================== PIN SECURITY SYSTEM ====================
 let currentPinInput = '';
@@ -126,6 +131,10 @@ function verifyPin() {
         document.getElementById('lock-screen').classList.add('hidden');
         showAppContent();
         currentPinInput = '';
+        
+        // Inicializar año de sesión al año actual al desbloquear
+        sessionViewYear = new Date().getFullYear();
+        syncAllYearSelectors();
     } else {
         // Wrong PIN
         document.getElementById('pin-error').textContent = 'PIN incorrecto. Inténtalo de nuevo.';
@@ -139,6 +148,18 @@ function verifyPin() {
             display.style.animation = '';
         }, 500);
     }
+}
+
+// Sincronizar todos los selectores de año con el año de sesión
+function syncAllYearSelectors() {
+    const selectors = ['dashboard-year', 'historial-year', 'extras-year', 'stats-year'];
+    
+    selectors.forEach(id => {
+        const select = document.getElementById(id);
+        if (select) {
+            select.value = sessionViewYear;
+        }
+    });
 }
 
 // Change PIN from Settings
@@ -302,6 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLoansList();
     updateStats();
     initExtras(); // Initialize Extras module
+    initUpdateSystem(); // Initialize update system (last update date)
     registerServiceWorker();
     setupEnterKeyNavigation();
     setupAutoSelectOnFocus();
@@ -1586,6 +1608,12 @@ function onDashboardUpdateClick() {
     const yearSelect = document.getElementById('dashboard-year');
     const monthSelect = document.getElementById('dashboard-month');
     const selectedYear = parseInt(yearSelect.value);
+    
+    // Actualizar el año de sesión global
+    sessionViewYear = selectedYear;
+    
+    // Sincronizar todos los selectores de año
+    syncAllYearSelectors();
     
     // Primero actualiza las opciones del mes según el año seleccionado
     updateDashboardMonthsForYear(selectedYear);
@@ -3387,4 +3415,93 @@ function initExtras() {
     
     // Actualizar widget del Dashboard
     updateExtrasDashboard();
+}
+
+// ==================== SISTEMA DE ACTUALIZACIÓN PWA ====================
+
+// Obtener fecha de última actualización
+function getLastUpdateDate() {
+    const stored = localStorage.getItem(LAST_UPDATE_KEY);
+    if (stored) {
+        return new Date(stored);
+    }
+    // Si no hay fecha guardada, guardar la actual
+    const now = new Date();
+    localStorage.setItem(LAST_UPDATE_KEY, now.toISOString());
+    return now;
+}
+
+// Formatear fecha de forma amigable (estilo español)
+function formatUpdateDate(date) {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    
+    return `${day}/${month}/${year} a las ${hours}:${minutes}`;
+}
+
+// Actualizar la etiqueta de última actualización en la UI
+function updateLastUpdateLabel() {
+    const label = document.getElementById('last-update-date');
+    if (label) {
+        const lastUpdate = getLastUpdateDate();
+        label.textContent = formatUpdateDate(lastUpdate);
+    }
+}
+
+// Buscar actualización (Hard Reload PWA)
+async function buscarActualizacion() {
+    try {
+        // 1. Actualizar fecha en localStorage
+        const now = new Date();
+        localStorage.setItem(LAST_UPDATE_KEY, now.toISOString());
+        
+        // 2. Mostrar mensaje de actualización
+        const updateStatus = document.getElementById('update-status');
+        if (updateStatus) {
+            updateStatus.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; color: var(--primary);">
+                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20" style="animation: spin 1s linear infinite;">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                    </svg>
+                    <span style="font-size: 13px; font-weight: 500;">Descargando nueva versión...</span>
+                </div>
+            `;
+        }
+        
+        // 3. Desregistrar Service Workers
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+                await registration.unregister();
+            }
+            console.log('Service Workers desregistrados');
+        }
+        
+        // 4. Limpiar todas las cachés
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+                cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+            console.log('Cachés limpiadas');
+        }
+        
+        // 5. Esperar un momento para que el usuario vea el mensaje
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 6. Forzar recarga completa
+        window.location.reload(true);
+        
+    } catch (error) {
+        console.error('Error al actualizar:', error);
+        alert('⚠️ Error al buscar actualización. Intenta de nuevo.');
+    }
+}
+
+// Inicializar sistema de actualización
+function initUpdateSystem() {
+    updateLastUpdateLabel();
 }

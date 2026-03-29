@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v60 -->
+<!-- Updated: 2025-07-28-v61 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -654,6 +654,12 @@
         }
         
         /* ==================== EXTRAS MODULE STYLES ==================== */
+        
+        /* Spin animation for update */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
         
         /* FAB (Floating Action Button) */
         .extras-fab {
@@ -2102,6 +2108,41 @@
                     Año de Creación: 2026
                 </p>
             </div>
+        </div>
+        
+        <!-- Update Section (iOS Style) -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #007AFF, #5856D6); display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+                </div>
+                <div>
+                    <p style="font-weight: 600;">Actualización</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Gestión de versiones</p>
+                </div>
+            </div>
+            
+            <!-- Last Update Info (iOS List Style) -->
+            <div style="background: var(--bg-input); border-radius: 12px; overflow: hidden;">
+                <!-- Last Update Row -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: var(--text-primary); font-size: 14px;">Última Actualización</span>
+                    <span id="last-update-date" style="color: var(--text-secondary); font-size: 14px;">Cargando...</span>
+                </div>
+                
+                <!-- Check for Update Row (Interactive Link Style) -->
+                <button onclick="buscarActualizacion()" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: transparent; border: none; cursor: pointer;">
+                    <span style="color: #007AFF; font-size: 14px; font-weight: 500;">Buscar actualización</span>
+                    <svg width="16" height="16" fill="#007AFF" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                </button>
+            </div>
+            
+            <!-- Update Status (Hidden by default, shown when updating) -->
+            <div id="update-status" style="margin-top: 12px; text-align: center;"></div>
+            
+            <p style="color: var(--text-secondary); font-size: 11px; margin-top: 12px; text-align: center; line-height: 1.5;">
+                Pulsa "Buscar actualización" para descargar la última versión de la aplicación.
+            </p>
         </div>
         
         <!-- Security Section -->
