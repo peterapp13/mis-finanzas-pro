@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v70
+// Version: 2025-07-28-v71
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2713,33 +2713,122 @@ function getPayrollInputs() {
 // Setup Enter key navigation
 function setupEnterKeyNavigation() {
     document.addEventListener('keydown', (e) => {
-        // Only handle Enter key
-        if (e.key !== 'Enter') return;
-        
         // Get the active element
         const activeElement = document.activeElement;
         
         // Check if it's an input field
         if (!activeElement || activeElement.tagName !== 'INPUT') return;
         
-        // Prevent form submission
-        e.preventDefault();
-        e.stopPropagation();
+        // Check if we're in a payroll table
+        const isInPayrollTable = activeElement.closest('#payroll-tbody') || 
+                                  activeElement.closest('#ss-tbody') ||
+                                  activeElement.id === 'irpf_percent';
         
-        // Get all payroll inputs
-        const inputs = getPayrollInputs();
+        if (!isInPayrollTable) return;
         
-        // Find current input index
-        const currentIndex = inputs.indexOf(activeElement);
+        // Handle Enter key (move to next input)
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const inputs = getPayrollInputs();
+            const currentIndex = inputs.indexOf(activeElement);
+            
+            if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
+                const nextInput = inputs[currentIndex + 1];
+                nextInput.focus();
+                nextInput.select();
+            } else if (currentIndex === inputs.length - 1) {
+                activeElement.blur();
+            }
+            return;
+        }
         
-        // If found, move to next input
-        if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
-            const nextInput = inputs[currentIndex + 1];
-            nextInput.focus();
-            nextInput.select();
-        } else if (currentIndex === inputs.length - 1) {
-            // At the last input, blur to close keyboard
-            activeElement.blur();
+        // Handle Arrow keys for Excel-like navigation
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            const row = activeElement.closest('tr');
+            const table = activeElement.closest('table');
+            
+            if (!row || !table) {
+                // If not in a table (like irpf_percent), use linear navigation
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    const inputs = getPayrollInputs();
+                    const currentIndex = inputs.indexOf(activeElement);
+                    if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
+                        inputs[currentIndex + 1].focus();
+                        inputs[currentIndex + 1].select();
+                    }
+                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    const inputs = getPayrollInputs();
+                    const currentIndex = inputs.indexOf(activeElement);
+                    if (currentIndex > 0) {
+                        inputs[currentIndex - 1].focus();
+                        inputs[currentIndex - 1].select();
+                    }
+                }
+                return;
+            }
+            
+            // Get all inputs in current row
+            const rowInputs = Array.from(row.querySelectorAll('input:not([disabled])'));
+            const colIndex = rowInputs.indexOf(activeElement);
+            
+            // Get all rows in table body
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const rowIndex = rows.indexOf(row);
+            
+            let targetInput = null;
+            
+            switch (e.key) {
+                case 'ArrowUp':
+                    // Move to same column in previous row
+                    if (rowIndex > 0) {
+                        const prevRow = rows[rowIndex - 1];
+                        const prevRowInputs = Array.from(prevRow.querySelectorAll('input:not([disabled])'));
+                        if (prevRowInputs[colIndex]) {
+                            targetInput = prevRowInputs[colIndex];
+                        } else if (prevRowInputs.length > 0) {
+                            targetInput = prevRowInputs[prevRowInputs.length - 1];
+                        }
+                    }
+                    break;
+                    
+                case 'ArrowDown':
+                    // Move to same column in next row
+                    if (rowIndex < rows.length - 1) {
+                        const nextRow = rows[rowIndex + 1];
+                        const nextRowInputs = Array.from(nextRow.querySelectorAll('input:not([disabled])'));
+                        if (nextRowInputs[colIndex]) {
+                            targetInput = nextRowInputs[colIndex];
+                        } else if (nextRowInputs.length > 0) {
+                            targetInput = nextRowInputs[0];
+                        }
+                    }
+                    break;
+                    
+                case 'ArrowLeft':
+                    // Move to previous column in same row
+                    if (colIndex > 0) {
+                        targetInput = rowInputs[colIndex - 1];
+                    }
+                    break;
+                    
+                case 'ArrowRight':
+                    // Move to next column in same row
+                    if (colIndex < rowInputs.length - 1) {
+                        targetInput = rowInputs[colIndex + 1];
+                    }
+                    break;
+            }
+            
+            if (targetInput) {
+                e.preventDefault();
+                targetInput.focus();
+                targetInput.select();
+            }
         }
     });
     
