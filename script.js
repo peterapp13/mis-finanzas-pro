@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v78
+// Version: 2025-07-28-v79
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1736,15 +1736,32 @@ function updateDashboardMonthsForYearOnly() {
 // Función llamada por el botón "Actualizar" del Dashboard
 function onDashboardUpdateClick() {
     const yearSelect = document.getElementById('dashboard-year');
+    const monthSelect = document.getElementById('dashboard-month');
     const selectedYear = parseInt(yearSelect.value);
+    const selectedMonth = monthSelect.value; // Preservar la selección actual del mes
     
     // Actualizar la variable GLOBAL (Single Source of Truth)
     anioGlobalActivo = selectedYear;
     
-    // Actualizar las opciones del mes según el año seleccionado
-    updateDashboardMonthsForYear(anioGlobalActivo);
+    // Solo regenerar el selector de meses si el año cambió
+    // (no si el usuario solo cambió el mes y pulsó Actualizar)
+    const currentMonthOptions = Array.from(monthSelect.options).map(o => o.value);
+    const data = getData() || [];
+    const yearRecords = data.filter(r => parseInt(r.year) === selectedYear);
     
-    // Actualizar todo el Dashboard (usa anioGlobalActivo internamente)
+    // Verificar si necesitamos regenerar (si el número de registros cambió)
+    const needsRegenerate = yearRecords.length !== currentMonthOptions.filter(v => v !== 'current' && v !== 'empty').length;
+    
+    if (needsRegenerate) {
+        updateDashboardMonthsForYear(anioGlobalActivo);
+    }
+    
+    // Restaurar la selección del mes si aún existe en las opciones
+    if (selectedMonth && Array.from(monthSelect.options).some(o => o.value === selectedMonth)) {
+        monthSelect.value = selectedMonth;
+    }
+    
+    // Actualizar todo el Dashboard
     updateDashboard();
     
     // Actualizar el widget de Extras (usa anioGlobalActivo)
