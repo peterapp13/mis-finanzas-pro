@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v73
+// Version: 2025-07-28-v74
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -325,6 +325,73 @@ const ssManuallyEdited = {};
 // Persistent percentage configuration key
 const CONFIG_PERCENTAGES_KEY = 'mis-finanzas-pro-config-percentages';
 
+// Key para guardar precios personalizados de conceptos
+const PRECIOS_GUARDADOS_KEY = 'finanzas_precios_conceptos';
+
+// Valores iniciales hardcoded para precargar
+const VALORES_PRECARGA = {
+    salario_base: { unidad: 30, precio: 36 },
+    pp_pagas: { unidad: 30, precio: 6 },
+    salario_minimo: { unidad: 30, precio: 5.4833 },
+    productividad: { unidad: 150, precio: 1 }
+};
+
+// Obtener precios guardados (solo para conceptos que memorizan)
+function getPreciosGuardados() {
+    const saved = localStorage.getItem(PRECIOS_GUARDADOS_KEY);
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            return {};
+        }
+    }
+    return {};
+}
+
+// Guardar precios personalizados (excepto productividad)
+function guardarPreciosPersonalizados() {
+    const precios = {};
+    
+    // Solo guardar precio de estos 3 conceptos (NO productividad)
+    ['salario_base', 'pp_pagas', 'salario_minimo'].forEach(id => {
+        const precioInput = document.getElementById(`${id}_precio`);
+        if (precioInput && precioInput.value) {
+            precios[id] = parseFloat(precioInput.value) || VALORES_PRECARGA[id].precio;
+        }
+    });
+    
+    localStorage.setItem(PRECIOS_GUARDADOS_KEY, JSON.stringify(precios));
+}
+
+// Precargar valores en el formulario
+function precargarValoresNomina() {
+    const preciosGuardados = getPreciosGuardados();
+    
+    Object.keys(VALORES_PRECARGA).forEach(conceptId => {
+        const config = VALORES_PRECARGA[conceptId];
+        const unidadInput = document.getElementById(`${conceptId}_unidad`);
+        const precioInput = document.getElementById(`${conceptId}_precio`);
+        
+        if (unidadInput) {
+            unidadInput.value = config.unidad;
+        }
+        
+        if (precioInput) {
+            // Productividad: siempre valor hardcoded
+            // Otros: usar precio guardado si existe, sino hardcoded
+            if (conceptId === 'productividad') {
+                precioInput.value = config.precio;
+            } else {
+                precioInput.value = preciosGuardados[conceptId] || config.precio;
+            }
+        }
+        
+        // Recalcular la fila
+        calculateRow(conceptId);
+    });
+}
+
 let selectedMonth = new Date().getMonth() + 1;
 let selectedYear = new Date().getFullYear();
 let statsYear = new Date().getFullYear();
@@ -430,6 +497,9 @@ function initPayrollTable() {
         `;
         tbody.appendChild(row);
     });
+    
+    // Precargar valores por defecto
+    precargarValoresNomina();
 }
 
 function calculateRow(conceptId) {
@@ -775,6 +845,9 @@ function savePayroll() {
         return;
     }
     
+    // Guardar precios personalizados (excepto productividad)
+    guardarPreciosPersonalizados();
+    
     // Collect all concept data
     const conceptData = {};
     concepts.forEach(concept => {
@@ -865,6 +938,10 @@ function resetForm() {
     });
     
     document.getElementById('irpf_percent').value = '6';
+    
+    // Precargar valores por defecto después de limpiar
+    precargarValoresNomina();
+    
     calculateTotals();
 }
 
