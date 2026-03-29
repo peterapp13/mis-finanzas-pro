@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v55
+// Version: 2025-07-28-v56
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -301,6 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateExpensesList();
     updateLoansList();
     updateStats();
+    initExtras(); // Initialize Extras module
     registerServiceWorker();
     setupEnterKeyNavigation();
     setupAutoSelectOnFocus();
@@ -655,6 +656,10 @@ function switchTab(tab) {
     if (tab === 'bancos') updateBanksList();
     if (tab === 'gastos') updateExpensesList();
     if (tab === 'prestamos') updateLoansList();
+    if (tab === 'extras') {
+        renderExtrasHistorial();
+        updateExtrasDashboard();
+    }
     if (tab === 'dashboard') {
         // Initialize selectors if not already done
         const monthSelect = document.getElementById('dashboard-month');
@@ -663,6 +668,7 @@ function switchTab(tab) {
         } else {
             updateDashboard();
         }
+        updateExtrasDashboard(); // Update Extras widget in Dashboard
     }
     if (tab === 'stats') updateStats();
     if (tab === 'historial') updateHistorial();
@@ -3023,4 +3029,183 @@ function deleteAllData() {
     
     // Reload app
     window.location.reload();
+}
+
+// ==================== MÓDULO EXTRAS (RENDIMIENTOS DEL CAPITAL) ====================
+const EXTRAS_STORAGE_KEY = 'mis-finanzas-extras';
+const IRPF_CAPITAL = 0.19; // 19% fijo para rendimientos del capital mobiliario
+
+// Obtener extras del localStorage
+function getExtras() {
+    const data = localStorage.getItem(EXTRAS_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+// Guardar extras en localStorage
+function saveExtras(extras) {
+    localStorage.setItem(EXTRAS_STORAGE_KEY, JSON.stringify(extras));
+}
+
+// Calcular preview al escribir el bruto
+function calcularExtraPreview() {
+    const bruto = parseFloat(document.getElementById('extra-bruto').value) || 0;
+    const irpf = bruto * IRPF_CAPITAL;
+    const neto = bruto - irpf;
+    
+    document.getElementById('extra-irpf-preview').textContent = formatCurrency(irpf);
+    document.getElementById('extra-neto-preview').textContent = formatCurrency(neto);
+}
+
+// Guardar nuevo extra
+function guardarExtra() {
+    const fecha = document.getElementById('extra-fecha').value;
+    const concepto = document.getElementById('extra-concepto').value.trim();
+    const bruto = parseFloat(document.getElementById('extra-bruto').value) || 0;
+    
+    if (!fecha) {
+        alert('⚠️ Por favor, selecciona una fecha.');
+        return;
+    }
+    
+    if (!concepto) {
+        alert('⚠️ Por favor, introduce un concepto.');
+        return;
+    }
+    
+    if (bruto <= 0) {
+        alert('⚠️ El importe bruto debe ser mayor que 0.');
+        return;
+    }
+    
+    const irpf = bruto * IRPF_CAPITAL;
+    const neto = bruto - irpf;
+    
+    const nuevoExtra = {
+        id: Date.now().toString(),
+        fecha,
+        concepto,
+        bruto,
+        irpf,
+        neto,
+        createdAt: new Date().toISOString()
+    };
+    
+    const extras = getExtras();
+    extras.push(nuevoExtra);
+    saveExtras(extras);
+    
+    // Limpiar formulario
+    document.getElementById('extra-fecha').value = '';
+    document.getElementById('extra-concepto').value = '';
+    document.getElementById('extra-bruto').value = '';
+    calcularExtraPreview();
+    
+    // Actualizar UI
+    renderExtrasHistorial();
+    updateExtrasDashboard();
+    
+    alert('✅ Ingreso extra guardado correctamente.');
+}
+
+// Eliminar extra
+function eliminarExtra(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este ingreso extra?')) {
+        return;
+    }
+    
+    let extras = getExtras();
+    extras = extras.filter(e => e.id !== id);
+    saveExtras(extras);
+    
+    renderExtrasHistorial();
+    updateExtrasDashboard();
+}
+
+// Renderizar historial de extras
+function renderExtrasHistorial() {
+    const extras = getExtras();
+    const container = document.getElementById('extras-historial');
+    const totalesContainer = document.getElementById('extras-totales');
+    
+    if (extras.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center; padding: 20px;">No hay ingresos extras registrados</p>';
+        totalesContainer.style.display = 'none';
+        return;
+    }
+    
+    // Ordenar por fecha (más reciente primero)
+    extras.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    
+    let html = '';
+    let totalBruto = 0;
+    let totalIrpf = 0;
+    let totalNeto = 0;
+    
+    extras.forEach(extra => {
+        totalBruto += extra.bruto;
+        totalIrpf += extra.irpf;
+        totalNeto += extra.neto;
+        
+        const fechaFormateada = new Date(extra.fecha).toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+        
+        html += `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--bg-input);">
+                <div style="flex: 1;">
+                    <p style="font-size: 13px; font-weight: 500;">${extra.concepto}</p>
+                    <p style="font-size: 11px; color: var(--text-secondary);">${fechaFormateada}</p>
+                </div>
+                <div style="text-align: right; margin-right: 12px;">
+                    <p style="font-size: 13px; font-weight: 600; color: var(--primary);">${formatCurrency(extra.neto)}</p>
+                    <p style="font-size: 10px; color: var(--text-secondary);">Bruto: ${formatCurrency(extra.bruto)}</p>
+                </div>
+                <button onclick="eliminarExtra('${extra.id}')" style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 107, 107, 0.1); border: none; color: var(--danger); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                </button>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    // Mostrar totales
+    document.getElementById('extras-hist-bruto').textContent = formatCurrency(totalBruto);
+    document.getElementById('extras-hist-irpf').textContent = formatCurrency(totalIrpf);
+    document.getElementById('extras-hist-neto').textContent = formatCurrency(totalNeto);
+    totalesContainer.style.display = 'block';
+}
+
+// Actualizar widget de Extras en el Dashboard
+function updateExtrasDashboard() {
+    const extras = getExtras();
+    
+    let totalBruto = 0;
+    let totalIrpf = 0;
+    let totalNeto = 0;
+    
+    extras.forEach(extra => {
+        totalBruto += extra.bruto;
+        totalIrpf += extra.irpf;
+        totalNeto += extra.neto;
+    });
+    
+    document.getElementById('extras-bruto-total').textContent = formatCurrency(totalBruto);
+    document.getElementById('extras-irpf-total').textContent = formatCurrency(totalIrpf);
+    document.getElementById('extras-neto-total').textContent = formatCurrency(totalNeto);
+}
+
+// Inicializar Extras al cargar la app
+function initExtras() {
+    // Establecer fecha de hoy por defecto
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaInput = document.getElementById('extra-fecha');
+    if (fechaInput) {
+        fechaInput.value = hoy;
+    }
+    
+    renderExtrasHistorial();
+    updateExtrasDashboard();
 }
