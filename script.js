@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v81
+// Version: 2025-07-28-v82
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2133,26 +2133,24 @@ const MINIMO_PERSONAL = 5550;        // Mínimo personal (soltero, sin hijos)
 const COTIZACION_SS_PERCENT = 6.35;
 
 // Reducción por rendimientos del trabajo (Art. 20 LIRPF - RDL 4/2024)
-// FÓRMULAS OFICIALES 2025:
-// ≤ 14.852€: 7.302€
-// 14.852,01 - 17.673,52€: 7.302 - 1,75 × (RNT - 14.852)
-// 17.673,52 - 19.747,50€: 2.364,34 - 1,14 × (RNT - 17.673,52)
-// > 19.747,50€: 0€
-function calcularReduccionRendimientos(rendimientoNeto) {
-    if (rendimientoNeto <= 0) return 0;
+// FÓRMULAS OFICIALES 2025 (corregido según instrucciones):
+// ≤ 14.852€: 7.302,15€
+// > 14.852€ y < 19.747,50€: 7.302,15 - 1,75 × (RNT - 14.852)
+// ≥ 19.747,50€: 0€
+function calcularReduccionRendimientos(rendimientoNetoPrevio) {
+    if (rendimientoNetoPrevio <= 0) return 0;
     
-    if (rendimientoNeto <= 14852) {
-        return 7302;
+    if (rendimientoNetoPrevio <= 14852) {
+        return 7302.15;
     }
     
-    if (rendimientoNeto <= 17673.52) {
-        return Math.max(0, 7302 - (1.75 * (rendimientoNeto - 14852)));
+    if (rendimientoNetoPrevio < 19747.50) {
+        const reduccion = 7302.15 - (1.75 * (rendimientoNetoPrevio - 14852));
+        // La reducción nunca puede ser negativa ni mayor que el rendimiento
+        return Math.max(0, Math.min(reduccion, rendimientoNetoPrevio));
     }
     
-    if (rendimientoNeto <= 19747.50) {
-        return Math.max(0, 2364.34 - (1.14 * (rendimientoNeto - 17673.52)));
-    }
-    
+    // Si >= 19747.50€, reducción = 0
     return 0;
 }
 
@@ -2191,14 +2189,16 @@ function calcularCuotaIRPF(baseLiquidable) {
 
 // Función principal para calcular la cuota real
 function calcularCuotaRealAragon(brutoAnual, ssAnual) {
-    // Paso 1: Rendimiento Neto del Trabajo
-    const rendimientoNeto = brutoAnual - ssAnual - GASTOS_DEDUCIBLES;
+    // Paso 1: Rendimiento Neto Previo (SIN restar gastos generales de 2000€)
+    const rendimientoNetoPrevio = brutoAnual - ssAnual;
     
     // Paso 2: Reducción por rendimientos del trabajo (Art. 20 LIRPF)
-    const reduccion = calcularReduccionRendimientos(rendimientoNeto);
+    // Se calcula sobre el Rendimiento Neto Previo (antes de restar los 2000€)
+    const reduccion = calcularReduccionRendimientos(rendimientoNetoPrevio);
     
     // Paso 3: Base Liquidable General
-    const baseLiquidableGeneral = Math.max(0, rendimientoNeto - reduccion);
+    // AHORA sí restamos la reducción Y los 2000€ de gastos generales (Art. 19)
+    const baseLiquidableGeneral = Math.max(0, rendimientoNetoPrevio - reduccion - GASTOS_DEDUCIBLES);
     
     // Paso 4: Cuota Íntegra (Estatal + Autonómica)
     const cuotaIntegra = calcularCuotaIRPF(baseLiquidableGeneral);
@@ -2210,7 +2210,7 @@ function calcularCuotaRealAragon(brutoAnual, ssAnual) {
     const cuotaLiquida = Math.max(0, cuotaIntegra - cuotaMinimo);
     
     return {
-        rendimientoNeto,
+        rendimientoNeto: rendimientoNetoPrevio - GASTOS_DEDUCIBLES, // Para mostrar en UI (neto después de gastos)
         reduccion,
         baseLiquidable: baseLiquidableGeneral,
         cuotaIntegra,
@@ -2230,15 +2230,16 @@ function calcularRetencionRecomendada(brutoMensual) {
     // Step 2: Calculate annual SS contributions (dynamic)
     const cotizacionSS = brutoAnual * (COTIZACION_SS_PERCENT / 100);
     
-    // Step 3: Calculate Net Work Income (Rendimiento Neto del Trabajo)
-    const rendimientoNeto = brutoAnual - cotizacionSS - GASTOS_DEDUCIBLES;
+    // Step 3: Rendimiento Neto Previo (SIN restar gastos generales de 2000€)
+    const rendimientoNetoPrevio = brutoAnual - cotizacionSS;
     
-    // Step 4: Apply DYNAMIC reduction for work income
-    // This will be 0 for incomes > 22,000€
-    const reduccion = calcularReduccionRendimientos(rendimientoNeto);
+    // Step 4: Apply DYNAMIC reduction for work income (Art. 20)
+    // Se calcula sobre el Rendimiento Neto Previo (antes de restar los 2000€)
+    const reduccion = calcularReduccionRendimientos(rendimientoNetoPrevio);
     
     // Step 5: Calculate Taxable Base (Base Liquidable General)
-    const baseLiquidable = Math.max(0, rendimientoNeto - reduccion);
+    // AHORA sí restamos la reducción Y los 2000€ de gastos generales (Art. 19)
+    const baseLiquidable = Math.max(0, rendimientoNetoPrevio - reduccion - GASTOS_DEDUCIBLES);
     
     // Step 6: Calculate gross tax WITHOUT personal minimum
     const cuotaIntegraSinMinimo = calcularCuotaIRPF(baseLiquidable);
@@ -2269,9 +2270,16 @@ function calcularRetencionRecomendada(brutoMensual) {
 function mostrarCalculoIRPF(brutoMensual) {
     const brutoAnual = brutoMensual * 12;
     const cotizacionSS = brutoAnual * (COTIZACION_SS_PERCENT / 100);
-    const rendimientoNeto = brutoAnual - cotizacionSS - GASTOS_DEDUCIBLES;
-    const reduccion = calcularReduccionRendimientos(rendimientoNeto);
-    const baseLiquidable = Math.max(0, rendimientoNeto - reduccion);
+    
+    // Rendimiento Neto Previo (SIN los 2000€)
+    const rendimientoNetoPrevio = brutoAnual - cotizacionSS;
+    
+    // Reducción calculada sobre el Rendimiento Neto Previo
+    const reduccion = calcularReduccionRendimientos(rendimientoNetoPrevio);
+    
+    // Base Liquidable = Rendimiento Neto Previo - Reducción - 2000€
+    const baseLiquidable = Math.max(0, rendimientoNetoPrevio - reduccion - GASTOS_DEDUCIBLES);
+    
     const cuotaIntegra = calcularCuotaIRPF(baseLiquidable);
     const cuotaMinimo = calcularCuotaIRPF(Math.min(MINIMO_PERSONAL, baseLiquidable));
     const cuotaLiquida = Math.max(0, cuotaIntegra - cuotaMinimo);
@@ -2280,7 +2288,7 @@ function mostrarCalculoIRPF(brutoMensual) {
     return {
         brutoAnual,
         cotizacionSS: cotizacionSS.toFixed(2),
-        rendimientoNeto: rendimientoNeto.toFixed(2),
+        rendimientoNeto: (rendimientoNetoPrevio - GASTOS_DEDUCIBLES).toFixed(2),
         reduccionTrabajo: reduccion.toFixed(2),
         baseLiquidable: baseLiquidable.toFixed(2),
         cuotaIntegra: cuotaIntegra.toFixed(2),
