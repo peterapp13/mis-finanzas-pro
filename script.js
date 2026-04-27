@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v86
+// Version: 2025-07-28-v87
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -84,9 +84,11 @@ function migrarDatosAntiguos() {
         return;
     }
     
-    // Migrar cada nómina añadiendo empresaId
-    const nominasMigradas = nominas.map(nomina => ({
+    // Migrar cada nómina añadiendo empresaId y asegurando ID único
+    const nominasMigradas = nominas.map((nomina, index) => ({
         ...nomina,
+        // Asegurar que cada nómina tiene un ID único
+        id: nomina.id || (Date.now().toString() + index.toString()),
         empresaId: 'empresa_default'
     }));
     
@@ -679,41 +681,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==================== SANITY CHECK - REMOVE DUPLICATES ====================
 function sanitizePayrollData() {
+    // v87: Esta función ya NO elimina nóminas del mismo mes.
+    // Ahora solo elimina registros verdaderamente duplicados (mismo ID exacto).
     const data = getData();
     if (!data || data.length === 0) return;
     
-    const seen = new Map();
+    const seenIds = new Set();
     const uniqueData = [];
     
-    // Keep only the most recent record for each month/year/empresa combination
+    // Solo eliminar registros con ID duplicado exacto (no por mes/año)
     data.forEach(record => {
-        // Incluir empresaId en la clave para permitir múltiples nóminas por mes
-        const empresaId = record.empresaId || 'empresa_default';
-        const key = `${record.month}-${record.year}-${empresaId}`;
-        const existing = seen.get(key);
+        // Si el registro no tiene ID, asignarle uno
+        if (!record.id) {
+            record.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        }
         
-        if (!existing) {
-            seen.set(key, record);
+        // Solo añadir si no hemos visto este ID antes
+        if (!seenIds.has(record.id)) {
+            seenIds.add(record.id);
             uniqueData.push(record);
         } else {
-            // Keep the newer one (compare by createdAt or id)
-            const existingTime = new Date(existing.createdAt || existing.id).getTime();
-            const currentTime = new Date(record.createdAt || record.id).getTime();
-            
-            if (currentTime > existingTime) {
-                // Replace with newer record
-                const idx = uniqueData.indexOf(existing);
-                if (idx !== -1) {
-                    uniqueData[idx] = record;
-                    seen.set(key, record);
-                }
-            }
+            console.log(`Sanitize: Eliminando registro duplicado con ID ${record.id}`);
         }
     });
     
-    // Only save if we removed duplicates
-    if (uniqueData.length < data.length) {
-        console.log(`Sanity Check: Removed ${data.length - uniqueData.length} duplicate payroll records`);
+    // Solo guardar si hubo cambios
+    if (uniqueData.length !== data.length) {
+        console.log(`Sanity Check: Corregidos ${data.length - uniqueData.length} registros`);
         saveData(uniqueData);
     }
 }
@@ -1152,23 +1146,10 @@ function savePayroll() {
     const data = getData();
     const empresa = getEmpresaById(empresaId);
     
-    // Buscar si ya existe una nómina para este mes/año/empresa
-    const existingIndex = data.findIndex(r => 
-        r.month === selectedMonth && 
-        r.year === selectedYear && 
-        r.empresaId === empresaId
-    );
-    
-    if (existingIndex !== -1) {
-        // Update existing record (keep same id for consistency)
-        record.id = data[existingIndex].id;
-        data[existingIndex] = record;
-        alert(`Nómina de ${empresa.nombre} - ${months[selectedMonth - 1]} ${selectedYear} actualizada correctamente`);
-    } else {
-        // Add new record (puede haber múltiples nóminas por mes de diferentes empresas)
-        data.push(record);
-        alert(`Nómina de ${empresa.nombre} - ${months[selectedMonth - 1]} ${selectedYear} archivada correctamente`);
-    }
+    // v87: SIEMPRE añadir como nueva nómina (ya no sobrescribimos por mes/año/empresa)
+    // Cada nómina tiene su propio ID único, permitiendo múltiples nóminas por mes
+    data.push(record);
+    alert(`Nómina de ${empresa.nombre} - ${months[selectedMonth - 1]} ${selectedYear} archivada correctamente`);
     
     saveData(data);
     resetForm();
