@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v83
+// Version: 2025-07-28-v84
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2974,6 +2974,16 @@ function updateHistorial() {
     const tbody = document.getElementById('historial-tbody');
     tbody.innerHTML = '';
     
+    // Agrupar nóminas por mes
+    const nominasPorMes = {};
+    yearData.forEach(record => {
+        const month = record.month;
+        if (!nominasPorMes[month]) {
+            nominasPorMes[month] = [];
+        }
+        nominasPorMes[month].push(record);
+    });
+    
     // Totals accumulators
     let totals = {
         salario: 0, pagas: 0, smg: 0, prod: 0, hfest: 0, chfest: 0,
@@ -2982,70 +2992,86 @@ function updateHistorial() {
     
     // Generate 12 rows (one per month)
     for (let month = 1; month <= 12; month++) {
-        const record = yearData.find(r => r.month === month);
+        const nominasDelMes = nominasPorMes[month] || [];
+        const hasData = nominasDelMes.length > 0;
+        const hasMultiple = nominasDelMes.length > 1;
+        
+        // Calcular totales del mes (suma de todas las nóminas)
+        let monthTotals = {
+            salario: 0, pagas: 0, smg: 0, prod: 0, hfestUds: 0, hfestCost: 0,
+            hextraUds: 0, hextraCost: 0, noct: 0, atraso: 0, ss: 0, irpPercent: 0, irpCost: 0, bruto: 0, neto: 0
+        };
+        
+        nominasDelMes.forEach(record => {
+            const c = record.concepts || {};
+            monthTotals.salario += c.salario_base ? c.salario_base.abonar : 0;
+            monthTotals.pagas += c.pp_pagas ? c.pp_pagas.abonar : 0;
+            monthTotals.smg += c.salario_minimo ? c.salario_minimo.abonar : 0;
+            monthTotals.prod += c.productividad ? c.productividad.abonar : 0;
+            monthTotals.hfestUds += c.horas_festivas ? c.horas_festivas.unidad : 0;
+            monthTotals.hfestCost += c.horas_festivas ? c.horas_festivas.abonar : 0;
+            monthTotals.hextraUds += c.horas_extras ? c.horas_extras.unidad : 0;
+            monthTotals.hextraCost += c.horas_extras ? c.horas_extras.abonar : 0;
+            monthTotals.noct += c.plus_nocturnidad ? c.plus_nocturnidad.abonar : 0;
+            monthTotals.atraso += c.atraso_mes ? c.atraso_mes.abonar : 0;
+            monthTotals.ss += record.ssAmount || 0;
+            monthTotals.irpCost += record.irpfAmount || 0;
+            monthTotals.bruto += record.totalBruto || 0;
+            monthTotals.neto += record.totalNeto || 0;
+        });
+        
+        // Calcular % IRPF promedio ponderado
+        if (monthTotals.bruto > 0) {
+            monthTotals.irpPercent = (monthTotals.irpCost / monthTotals.bruto) * 100;
+        }
+        
+        // Acumular totales anuales
+        totals.salario += monthTotals.salario;
+        totals.pagas += monthTotals.pagas;
+        totals.smg += monthTotals.smg;
+        totals.prod += monthTotals.prod;
+        totals.hfest += monthTotals.hfestUds;
+        totals.chfest += monthTotals.hfestCost;
+        totals.hextra += monthTotals.hextraUds;
+        totals.chextra += monthTotals.hextraCost;
+        totals.noct += monthTotals.noct;
+        totals.atraso += monthTotals.atraso;
+        totals.ss += monthTotals.ss;
+        totals.irp += monthTotals.irpCost;
+        totals.bruto += monthTotals.bruto;
+        totals.neto += monthTotals.neto;
+        
+        // Fila principal del mes
         const row = document.createElement('tr');
         
-        if (record) {
-            // Extract data from the saved record
-            const c = record.concepts || {};
-            
-            const salario = c.salario_base ? c.salario_base.abonar : 0;
-            const pagas = c.pp_pagas ? c.pp_pagas.abonar : 0;
-            const smg = c.salario_minimo ? c.salario_minimo.abonar : 0;
-            const prod = c.productividad ? c.productividad.abonar : 0;
-            const hfestUds = c.horas_festivas ? c.horas_festivas.unidad : 0;
-            const hfestCost = c.horas_festivas ? c.horas_festivas.abonar : 0;
-            const hextraUds = c.horas_extras ? c.horas_extras.unidad : 0;
-            const hextraCost = c.horas_extras ? c.horas_extras.abonar : 0;
-            const noct = c.plus_nocturnidad ? c.plus_nocturnidad.abonar : 0;
-            const atraso = c.atraso_mes ? c.atraso_mes.abonar : 0;
-            const ss = record.ssAmount || 0;
-            const irpPercent = record.irpfPercent || 0;
-            const irpCost = record.irpfAmount || 0;
-            const bruto = record.totalBruto || 0;
-            const neto = record.totalNeto || 0;
-            
-            // Accumulate totals
-            totals.salario += salario;
-            totals.pagas += pagas;
-            totals.smg += smg;
-            totals.prod += prod;
-            totals.hfest += hfestUds;
-            totals.chfest += hfestCost;
-            totals.hextra += hextraUds;
-            totals.chextra += hextraCost;
-            totals.noct += noct;
-            totals.atraso += atraso;
-            totals.ss += ss;
-            totals.irp += irpCost;
-            totals.bruto += bruto;
-            totals.neto += neto;
+        if (hasData) {
+            const expandIcon = hasMultiple ? `<span onclick="toggleDetallesMes(${month})" style="cursor: pointer; margin-right: 4px;" title="Ver desglose">▶</span>` : '';
+            const empresasBadge = hasMultiple ? `<span style="background: var(--purple); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: 6px;">${nominasDelMes.length} emp.</span>` : '';
             
             row.innerHTML = `
-                <td style="padding: 10px 8px; font-weight: 500; color: var(--primary); position: sticky; left: 0; background: var(--bg-card); white-space: nowrap;">${monthsShort[month - 1]} ${selectedYear}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(salario)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(pagas)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(smg)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(prod)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${hfestUds}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(hfestCost)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${hextraUds}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(hextraCost)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(noct)}</td>
-                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(atraso)}</td>
-                <td style="padding: 10px 6px; text-align: right; color: var(--purple);">${formatCurrency(ss)}</td>
-                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${irpPercent.toFixed(2)}%</td>
-                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${formatCurrency(irpCost)}</td>
-                <td style="padding: 10px 6px; text-align: right; font-weight: 600;">${formatCurrency(bruto)}</td>
-                <td style="padding: 10px 6px; text-align: right; font-weight: 600; color: var(--primary);">${formatCurrency(neto)}</td>
+                <td style="padding: 10px 8px; font-weight: 500; color: var(--primary); position: sticky; left: 0; background: var(--bg-card); white-space: nowrap;">${expandIcon}${monthsShort[month - 1]} ${selectedYear}${empresasBadge}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.salario)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.pagas)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.smg)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.prod)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${monthTotals.hfestUds}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.hfestCost)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${monthTotals.hextraUds}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.hextraCost)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.noct)}</td>
+                <td style="padding: 10px 6px; text-align: right;">${formatCurrency(monthTotals.atraso)}</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--purple);">${formatCurrency(monthTotals.ss)}</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${monthTotals.irpPercent.toFixed(2)}%</td>
+                <td style="padding: 10px 6px; text-align: right; color: var(--danger);">${formatCurrency(monthTotals.irpCost)}</td>
+                <td style="padding: 10px 6px; text-align: right; font-weight: 600;">${formatCurrency(monthTotals.bruto)}</td>
+                <td style="padding: 10px 6px; text-align: right; font-weight: 600; color: var(--primary);">${formatCurrency(monthTotals.neto)}</td>
                 <td style="padding: 10px 6px; text-align: center;">
-                    <button onclick="deleteHistorialRecord('${record.id}')" style="background: none; border: none; color: var(--danger); cursor: pointer; padding: 4px;" title="Eliminar">
+                    ${!hasMultiple ? `<button onclick="deleteHistorialRecord('${nominasDelMes[0].id}')" style="background: none; border: none; color: var(--danger); cursor: pointer; padding: 4px;" title="Eliminar">
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
+                    </button>` : '<span style="color: var(--text-secondary); font-size: 11px;">▼</span>'}
                 </td>
             `;
         } else {
-            // Empty row for months without data
             row.innerHTML = `
                 <td style="padding: 10px 8px; font-weight: 500; color: var(--text-secondary); position: sticky; left: 0; background: var(--bg-card); white-space: nowrap;">${monthsShort[month - 1]} ${selectedYear}</td>
                 <td style="padding: 10px 6px; text-align: right; color: var(--text-secondary);">-</td>
@@ -3069,6 +3095,55 @@ function updateHistorial() {
         
         row.style.borderBottom = '1px solid var(--bg-input)';
         tbody.appendChild(row);
+        
+        // Si hay múltiples nóminas, añadir filas de desglose (ocultas inicialmente)
+        if (hasMultiple) {
+            nominasDelMes.forEach((record, idx) => {
+                const empresa = getEmpresaById(record.empresaId || 'empresa_default');
+                const c = record.concepts || {};
+                
+                const detalleRow = document.createElement('tr');
+                detalleRow.className = `detalle-mes-${month}`;
+                detalleRow.style.display = 'none'; // Oculto por defecto
+                detalleRow.style.background = 'var(--bg-input)';
+                
+                const salario = c.salario_base ? c.salario_base.abonar : 0;
+                const pagas = c.pp_pagas ? c.pp_pagas.abonar : 0;
+                const smg = c.salario_minimo ? c.salario_minimo.abonar : 0;
+                const prod = c.productividad ? c.productividad.abonar : 0;
+                const hfestUds = c.horas_festivas ? c.horas_festivas.unidad : 0;
+                const hfestCost = c.horas_festivas ? c.horas_festivas.abonar : 0;
+                const hextraUds = c.horas_extras ? c.horas_extras.unidad : 0;
+                const hextraCost = c.horas_extras ? c.horas_extras.abonar : 0;
+                const noct = c.plus_nocturnidad ? c.plus_nocturnidad.abonar : 0;
+                const atraso = c.atraso_mes ? c.atraso_mes.abonar : 0;
+                
+                detalleRow.innerHTML = `
+                    <td style="padding: 6px 8px; font-size: 12px; color: var(--text-secondary); position: sticky; left: 0; background: var(--bg-input); white-space: nowrap; padding-left: 24px;">↳ ${empresa.nombre}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(salario)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(pagas)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(smg)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(prod)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${hfestUds}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(hfestCost)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${hextraUds}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(hextraCost)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(noct)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px;">${formatCurrency(atraso)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px; color: var(--purple);">${formatCurrency(record.ssAmount || 0)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px; color: var(--danger);">${(record.irpfPercent || 0).toFixed(2)}%</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px; color: var(--danger);">${formatCurrency(record.irpfAmount || 0)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px; font-weight: 500;">${formatCurrency(record.totalBruto || 0)}</td>
+                    <td style="padding: 6px; text-align: right; font-size: 12px; font-weight: 500; color: var(--primary);">${formatCurrency(record.totalNeto || 0)}</td>
+                    <td style="padding: 6px; text-align: center;">
+                        <button onclick="deleteHistorialRecord('${record.id}')" style="background: none; border: none; color: var(--danger); cursor: pointer; padding: 2px;" title="Eliminar">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(detalleRow);
+            });
+        }
     }
     
     // Update footer totals with formatCurrency
@@ -3086,6 +3161,16 @@ function updateHistorial() {
     document.getElementById('hist-total-irp').textContent = totals.irp > 0 ? formatCurrency(totals.irp) : '-';
     document.getElementById('hist-total-bruto').textContent = totals.bruto > 0 ? formatCurrency(totals.bruto) : '-';
     document.getElementById('hist-total-neto').textContent = totals.neto > 0 ? formatCurrency(totals.neto) : '-';
+}
+
+// Función para expandir/colapsar el desglose de nóminas del mes
+function toggleDetallesMes(month) {
+    const detalles = document.querySelectorAll(`.detalle-mes-${month}`);
+    const isVisible = detalles[0] && detalles[0].style.display !== 'none';
+    
+    detalles.forEach(row => {
+        row.style.display = isVisible ? 'none' : 'table-row';
+    });
 }
 
 // Delete record from Historial

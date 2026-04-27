@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mis-finanzas-pro-v83';
+const CACHE_NAME = 'mis-finanzas-pro-v84';
 const urlsToCache = [
   './',
   './index.html',
