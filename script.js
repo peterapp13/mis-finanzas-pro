@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v85
+// Version: 2025-07-28-v86
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2207,6 +2207,9 @@ function updateDashboard() {
     document.getElementById('rule-ahorro-bar').style.width = Math.min(150, ahorroPercent) + '%';
     updateRuleStatus('ahorro', categoryTotals.ahorro, targets.ahorro);
     
+    // Renderizar desglose de gastos por categoría
+    renderDesgloseGastos();
+    
     // Calculate Dinero Disponible (Necesidades libre + Ocio libre, EXCLUDING Ahorro)
     const dineroDisponible = Math.max(0, necesidadesLibre) + Math.max(0, ocioLibre);
     document.getElementById('dashboard-available-money').textContent = formatCurrency(dineroDisponible);
@@ -2247,6 +2250,69 @@ function updateRuleStatus(category, actual, target) {
         statusEl.style.color = 'var(--danger)';
         return diff;
     }
+}
+
+// ==================== DESGLOSE DE GASTOS POR CATEGORÍA ====================
+function renderDesgloseGastos() {
+    const expenses = getExpenses();
+    const loans = getLoans();
+    
+    // Colores por categoría
+    const categoryColors = {
+        necesidades: 'var(--danger)',
+        ocio: 'var(--purple)',
+        ahorro: 'var(--primary)'
+    };
+    
+    // Agrupar gastos y préstamos por categoría
+    const categorias = ['necesidades', 'ocio', 'ahorro'];
+    
+    categorias.forEach(cat => {
+        const container = document.getElementById(`desglose-${cat}`);
+        if (!container) return;
+        
+        // Filtrar gastos de esta categoría
+        const gastosCategoria = expenses.filter(e => (e.category || 'necesidades') === cat);
+        
+        // Filtrar préstamos activos de esta categoría
+        const prestamosCategoria = loans.filter(l => !l.paidOff && (l.category || 'necesidades') === cat);
+        
+        // Si no hay gastos ni préstamos, mostrar mensaje sutil
+        if (gastosCategoria.length === 0 && prestamosCategoria.length === 0) {
+            container.innerHTML = `<p style="color: var(--text-secondary); font-size: 11px; text-align: center; margin: 0;">Sin gastos asignados</p>`;
+            return;
+        }
+        
+        // Construir HTML del desglose
+        let html = '';
+        
+        // Renderizar gastos
+        gastosCategoria.forEach(gasto => {
+            const importeMensual = gasto.frequency === 'anual' ? gasto.amount / 12 : gasto.amount;
+            const frecuencia = gasto.frequency === 'anual' ? '(anual)' : '';
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: var(--bg-card); border-radius: 6px; font-size: 12px;">
+                    <span style="color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${gasto.name} <span style="opacity: 0.5;">${frecuencia}</span></span>
+                    <span style="color: ${categoryColors[cat]}; font-weight: 500; margin-left: 8px;">${formatCurrency(importeMensual)}</span>
+                </div>
+            `;
+        });
+        
+        // Renderizar préstamos
+        prestamosCategoria.forEach(prestamo => {
+            const status = calculateLoanStatus(prestamo);
+            if (status.remainingInstallments > 0) {
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: var(--bg-card); border-radius: 6px; font-size: 12px;">
+                        <span style="color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📋 ${prestamo.description}</span>
+                        <span style="color: ${categoryColors[cat]}; font-weight: 500; margin-left: 8px;">${formatCurrency(prestamo.payment)}</span>
+                    </div>
+                `;
+            }
+        });
+        
+        container.innerHTML = html;
+    });
 }
 
 function updateBankBreakdown() {
