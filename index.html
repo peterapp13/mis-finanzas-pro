@@ -1,4 +1,4 @@
-<!-- Updated: 2025-07-28-v82 -->
+<!-- Updated: 2025-07-28-v83 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1163,6 +1163,17 @@
             <div class="month-grid" id="month-grid"></div>
         </div>
         
+        <!-- Selector de Empresa -->
+        <div class="card" style="padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <label style="font-weight: 600; white-space: nowrap;">🏢 Empresa:</label>
+                <select id="empresa-select" style="flex: 1; padding: 10px; border-radius: 8px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); font-size: 16px;">
+                    <option value="">-- Selecciona Empresa --</option>
+                </select>
+            </div>
+            <p id="empresa-warning" class="hidden" style="color: var(--danger); font-size: 12px; margin-top: 8px;">⚠️ No hay empresas. Ve a Ajustes para crear una.</p>
+        </div>
+        
         <!-- Payroll Table -->
         <div class="card" style="padding: 12px;">
             <div class="table-scroll">
@@ -2110,6 +2121,30 @@
             </p>
         </div>
         
+        <!-- Gestión de Empresas -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--success); display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"/></svg>
+                </div>
+                <div>
+                    <p style="font-weight: 600;">Gestión de Empresas</p>
+                    <p style="color: var(--text-secondary); font-size: 12px;">Configura tus empleadores</p>
+                </div>
+            </div>
+            
+            <!-- Lista de empresas -->
+            <div id="empresas-list" style="margin-bottom: 12px;">
+                <!-- Se llena dinámicamente -->
+            </div>
+            
+            <!-- Botón añadir empresa -->
+            <button onclick="mostrarModalEmpresa()" style="width: 100%; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--success); color: white; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                Añadir Empresa
+            </button>
+        </div>
+        
         <!-- App Info -->
         <div class="card" style="margin-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
@@ -2384,6 +2419,38 @@
         <p style="font-size: 9px; color: var(--text-secondary); opacity: 0.6; letter-spacing: 0.5px;">
             Crafted by Peter Fernandes | Built for Precision
         </p>
+    </div>
+    
+    <!-- Modal Empresa -->
+    <div id="modal-empresa-overlay" class="modal-overlay hidden" onclick="cerrarModalEmpresa(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modal-empresa-title" style="margin: 0; font-size: 18px; font-weight: 700;">Añadir Empresa</h3>
+                <button onclick="cerrarModalEmpresa()" style="background: none; border: none; font-size: 24px; color: var(--text-secondary); cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="empresa-edit-id" value="">
+                
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">Nombre de la Empresa</label>
+                    <input type="text" id="empresa-nombre" placeholder="Ej: Empresa ABC S.L." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-size: 16px;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">CIF</label>
+                    <input type="text" id="empresa-cif" placeholder="Ej: B12345678" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-size: 16px;">
+                </div>
+                
+                <div style="display: flex; gap: 12px;">
+                    <button onclick="cerrarModalEmpresa()" style="flex: 1; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border);">
+                        Cancelar
+                    </button>
+                    <button onclick="guardarEmpresa()" style="flex: 1; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--success); color: white; border: none;">
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script src="./script.js" defer></script>

@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v82
+// Version: 2025-07-28-v83
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -9,10 +9,238 @@ const SAVINGS_HISTORY_KEY = 'mis-finanzas-pro-savings-history';
 const PIN_KEY = 'app_security_pin';
 const LAST_UPDATE_KEY = 'finanzas_last_update';
 const EXTRAS_STORAGE_KEY = 'mis-finanzas-extras';
+const EMPRESAS_KEY = 'empresas_finanzas';
+const MIGRACION_KEY = 'finanzas_migrated_v83';
 
 // ==================== ESTADO GLOBAL (SINGLE SOURCE OF TRUTH) ====================
 // Esta es la ÚNICA variable que controla el año activo en TODA la aplicación
 let anioGlobalActivo = new Date().getFullYear();
+
+// ==================== GESTIÓN DE EMPRESAS ====================
+function getEmpresas() {
+    const data = localStorage.getItem(EMPRESAS_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+function saveEmpresas(empresas) {
+    localStorage.setItem(EMPRESAS_KEY, JSON.stringify(empresas));
+}
+
+function getEmpresaById(id) {
+    const empresas = getEmpresas();
+    return empresas.find(e => e.id === id) || { id: 'unknown', nombre: 'Empresa Desconocida', cif: 'N/A' };
+}
+
+function crearEmpresaDefault() {
+    const empresas = getEmpresas();
+    if (!empresas.find(e => e.id === 'empresa_default')) {
+        empresas.push({
+            id: 'empresa_default',
+            nombre: 'Mi Empresa Actual',
+            cif: '00000000A'
+        });
+        saveEmpresas(empresas);
+    }
+}
+
+// ==================== MIGRACIÓN DE DATOS ANTIGUOS ====================
+function migrarDatosAntiguos() {
+    // Solo migrar una vez
+    if (localStorage.getItem(MIGRACION_KEY) === 'true') {
+        return;
+    }
+    
+    console.log('Iniciando migración de datos a v83...');
+    
+    // 1. Crear empresa por defecto
+    crearEmpresaDefault();
+    
+    // 2. Migrar nóminas antiguas
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) {
+        localStorage.setItem(MIGRACION_KEY, 'true');
+        return;
+    }
+    
+    let nominas;
+    try {
+        nominas = JSON.parse(data);
+    } catch (e) {
+        console.error('Error parseando datos:', e);
+        localStorage.setItem(MIGRACION_KEY, 'true');
+        return;
+    }
+    
+    if (!Array.isArray(nominas)) {
+        localStorage.setItem(MIGRACION_KEY, 'true');
+        return;
+    }
+    
+    // Verificar si ya está migrado (si algún registro tiene empresaId)
+    const yaMigrado = nominas.some(n => n.empresaId);
+    if (yaMigrado) {
+        console.log('Datos ya migrados previamente');
+        localStorage.setItem(MIGRACION_KEY, 'true');
+        return;
+    }
+    
+    // Migrar cada nómina añadiendo empresaId
+    const nominasMigradas = nominas.map(nomina => ({
+        ...nomina,
+        empresaId: 'empresa_default'
+    }));
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nominasMigradas));
+    localStorage.setItem(MIGRACION_KEY, 'true');
+    console.log('Migración completada. Nóminas migradas:', nominasMigradas.length);
+}
+
+// ==================== FUNCIONES UI EMPRESAS ====================
+function renderEmpresasList() {
+    const container = document.getElementById('empresas-list');
+    if (!container) return;
+    
+    const empresas = getEmpresas();
+    
+    if (empresas.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center; padding: 12px;">No hay empresas configuradas</p>';
+        return;
+    }
+    
+    container.innerHTML = empresas.map(empresa => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--bg-input); border-radius: 10px; margin-bottom: 8px;">
+            <div>
+                <p style="font-weight: 600; font-size: 14px;">${empresa.nombre}</p>
+                <p style="color: var(--text-secondary); font-size: 12px;">CIF: ${empresa.cif}</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="editarEmpresa('${empresa.id}')" style="background: var(--primary); color: var(--bg-dark); border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 12px;">
+                    Editar
+                </button>
+                <button onclick="eliminarEmpresa('${empresa.id}')" style="background: var(--danger); color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 12px;">
+                    ×
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function mostrarModalEmpresa(empresaId = null) {
+    const overlay = document.getElementById('modal-empresa-overlay');
+    const title = document.getElementById('modal-empresa-title');
+    const editId = document.getElementById('empresa-edit-id');
+    const nombreInput = document.getElementById('empresa-nombre');
+    const cifInput = document.getElementById('empresa-cif');
+    
+    if (empresaId) {
+        const empresa = getEmpresaById(empresaId);
+        title.textContent = 'Editar Empresa';
+        editId.value = empresaId;
+        nombreInput.value = empresa.nombre;
+        cifInput.value = empresa.cif;
+    } else {
+        title.textContent = 'Añadir Empresa';
+        editId.value = '';
+        nombreInput.value = '';
+        cifInput.value = '';
+    }
+    
+    overlay.classList.remove('hidden');
+}
+
+function cerrarModalEmpresa(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('modal-empresa-overlay').classList.add('hidden');
+}
+
+function editarEmpresa(empresaId) {
+    mostrarModalEmpresa(empresaId);
+}
+
+function guardarEmpresa() {
+    const editId = document.getElementById('empresa-edit-id').value;
+    const nombre = document.getElementById('empresa-nombre').value.trim();
+    const cif = document.getElementById('empresa-cif').value.trim();
+    
+    if (!nombre) {
+        alert('El nombre de la empresa es obligatorio');
+        return;
+    }
+    
+    const empresas = getEmpresas();
+    
+    if (editId) {
+        // Editar existente
+        const index = empresas.findIndex(e => e.id === editId);
+        if (index !== -1) {
+            empresas[index].nombre = nombre;
+            empresas[index].cif = cif;
+        }
+    } else {
+        // Crear nueva
+        empresas.push({
+            id: 'empresa_' + Date.now(),
+            nombre: nombre,
+            cif: cif || 'N/A'
+        });
+    }
+    
+    saveEmpresas(empresas);
+    cerrarModalEmpresa();
+    renderEmpresasList();
+    actualizarSelectorEmpresas();
+}
+
+function eliminarEmpresa(empresaId) {
+    // No permitir eliminar la empresa por defecto si hay nóminas asociadas
+    const data = getData();
+    const nominasConEmpresa = data.filter(n => n.empresaId === empresaId);
+    
+    if (nominasConEmpresa.length > 0) {
+        alert(`No puedes eliminar esta empresa porque tiene ${nominasConEmpresa.length} nómina(s) asociadas.`);
+        return;
+    }
+    
+    if (!confirm('¿Seguro que deseas eliminar esta empresa?')) return;
+    
+    const empresas = getEmpresas();
+    const filtered = empresas.filter(e => e.id !== empresaId);
+    saveEmpresas(filtered);
+    renderEmpresasList();
+    actualizarSelectorEmpresas();
+}
+
+function actualizarSelectorEmpresas() {
+    const select = document.getElementById('empresa-select');
+    const warning = document.getElementById('empresa-warning');
+    
+    if (!select) return;
+    
+    const empresas = getEmpresas();
+    
+    select.innerHTML = '<option value="">-- Selecciona Empresa --</option>';
+    
+    empresas.forEach(empresa => {
+        const option = document.createElement('option');
+        option.value = empresa.id;
+        option.textContent = `${empresa.nombre} (${empresa.cif})`;
+        select.appendChild(option);
+    });
+    
+    // Seleccionar la primera empresa por defecto si solo hay una
+    if (empresas.length === 1) {
+        select.value = empresas[0].id;
+    }
+    
+    // Mostrar/ocultar warning
+    if (warning) {
+        if (empresas.length === 0) {
+            warning.classList.remove('hidden');
+        } else {
+            warning.classList.add('hidden');
+        }
+    }
+}
 
 // ==================== PIN SECURITY SYSTEM ====================
 let currentPinInput = '';
@@ -412,6 +640,9 @@ let chart = null;
 
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', () => {
+    // MIGRACIÓN DE DATOS ANTIGUOS (PRIORIDAD 1)
+    migrarDatosAntiguos();
+    
     // Security check first
     initSecurityCheck();
     
@@ -435,6 +666,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEnterKeyNavigation();
     setupAutoSelectOnFocus();
     
+    // Inicializar gestión de empresas
+    renderEmpresasList();
+    actualizarSelectorEmpresas();
+    
     // Actualizar widget de Extras al final de toda la inicialización
     // Usar setTimeout para asegurar que todos los selectores estén poblados
     setTimeout(() => {
@@ -450,9 +685,11 @@ function sanitizePayrollData() {
     const seen = new Map();
     const uniqueData = [];
     
-    // Keep only the most recent record for each month/year combination
+    // Keep only the most recent record for each month/year/empresa combination
     data.forEach(record => {
-        const key = `${record.month}-${record.year}`;
+        // Incluir empresaId en la clave para permitir múltiples nóminas por mes
+        const empresaId = record.empresaId || 'empresa_default';
+        const key = `${record.month}-${record.year}-${empresaId}`;
         const existing = seen.get(key);
         
         if (!existing) {
@@ -858,6 +1095,15 @@ function savePayroll() {
         return;
     }
     
+    // Verificar que hay una empresa seleccionada
+    const empresaSelect = document.getElementById('empresa-select');
+    const empresaId = empresaSelect ? empresaSelect.value : 'empresa_default';
+    
+    if (!empresaId || empresaId === '') {
+        alert('Debes seleccionar una empresa. Ve a Ajustes para crear una.');
+        return;
+    }
+    
     // Guardar precios personalizados (excepto productividad)
     guardarPreciosPersonalizados();
     
@@ -889,6 +1135,7 @@ function savePayroll() {
     
     const record = {
         id: Date.now().toString(),
+        empresaId: empresaId,
         month: selectedMonth,
         year: selectedYear,
         concepts: conceptData,
@@ -902,19 +1149,25 @@ function savePayroll() {
         createdAt: new Date().toISOString()
     };
     
-    // UPSERT: Check if record for this month/year already exists
     const data = getData();
-    const existingIndex = data.findIndex(r => r.month === selectedMonth && r.year === selectedYear);
+    const empresa = getEmpresaById(empresaId);
+    
+    // Buscar si ya existe una nómina para este mes/año/empresa
+    const existingIndex = data.findIndex(r => 
+        r.month === selectedMonth && 
+        r.year === selectedYear && 
+        r.empresaId === empresaId
+    );
     
     if (existingIndex !== -1) {
         // Update existing record (keep same id for consistency)
         record.id = data[existingIndex].id;
         data[existingIndex] = record;
-        alert(`Nómina de ${months[selectedMonth - 1]} ${selectedYear} actualizada correctamente`);
+        alert(`Nómina de ${empresa.nombre} - ${months[selectedMonth - 1]} ${selectedYear} actualizada correctamente`);
     } else {
-        // Add new record
+        // Add new record (puede haber múltiples nóminas por mes de diferentes empresas)
         data.push(record);
-        alert(`Nómina de ${months[selectedMonth - 1]} ${selectedYear} archivada correctamente`);
+        alert(`Nómina de ${empresa.nombre} - ${months[selectedMonth - 1]} ${selectedYear} archivada correctamente`);
     }
     
     saveData(data);
@@ -2314,10 +2567,12 @@ function updateAnnualSummary() {
     
     document.getElementById('dashboard-annual-year').textContent = selectedYear;
     
-    const monthsCount = yearData.length;
+    // Calcular meses únicos (puede haber múltiples nóminas por mes de diferentes empresas)
+    const uniqueMonths = new Set(yearData.map(r => r.month));
+    const monthsCount = uniqueMonths.size;
     const isComplete = monthsCount === 12;
     
-    // Calculate actual accumulated values
+    // Calculate actual accumulated values (suma TODAS las nóminas)
     let totalBruto = 0;
     let totalIrpfRetenido = 0;
     let totalSS = 0;
