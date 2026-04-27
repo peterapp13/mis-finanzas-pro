@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v84
+// Version: 2025-07-28-v85
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -1955,16 +1955,26 @@ function updateDashboardMonthsForYear(targetYear) {
         monthSelect.appendChild(currentOption);
     }
     
-    // Sort by month descending (most recent first)
-    const sortedRecords = [...yearRecords].sort((a, b) => parseInt(b.month) - parseInt(a.month));
+    // Agrupar nóminas por mes (para soportar múltiples nóminas por mes)
+    const monthsWithData = [...new Set(yearRecords.map(r => parseInt(r.month)))];
     
-    // Add months that have records
-    sortedRecords.forEach(record => {
+    // Sort months descending (most recent first)
+    monthsWithData.sort((a, b) => b - a);
+    
+    // Add months that have records (agrupados por mes, NO por ID individual)
+    monthsWithData.forEach(monthNum => {
+        const nominasDelMes = yearRecords.filter(r => parseInt(r.month) === monthNum);
         const option = document.createElement('option');
-        option.value = record.id;
-        option.textContent = months[parseInt(record.month) - 1];
+        // Usar formato "month-X" para identificar que es una selección por mes
+        option.value = `month-${monthNum}`;
+        // Indicar si hay múltiples nóminas en el mes
+        if (nominasDelMes.length > 1) {
+            option.textContent = `${months[monthNum - 1]} (${nominasDelMes.length} nóminas)`;
+        } else {
+            option.textContent = months[monthNum - 1];
+        }
         monthSelect.appendChild(option);
-        console.log('Added month option:', record.month, months[parseInt(record.month) - 1]);
+        console.log('Added month option:', monthNum, months[monthNum - 1], 'nóminas:', nominasDelMes.length);
     });
     
     // If no records and not current year, show message
@@ -2037,13 +2047,13 @@ function updateDashboardMonths() {
     // Use helper function to populate months
     updateDashboardMonthsForYear(selectedYear);
     
-    // Get records for selected year to find most recent
+    // Get records for selected year to find most recent month
     const yearRecords = data.filter(r => parseInt(r.year) === selectedYear);
     
-    // If there are records for this year, select the most recent
+    // If there are records for this year, select the most recent month
     if (yearRecords.length > 0) {
-        const mostRecent = [...yearRecords].sort((a, b) => parseInt(b.month) - parseInt(a.month))[0];
-        monthSelect.value = mostRecent.id;
+        const mostRecentMonth = Math.max(...yearRecords.map(r => parseInt(r.month)));
+        monthSelect.value = `month-${mostRecentMonth}`;
     }
     
     updateDashboard();
@@ -2069,15 +2079,36 @@ function updateDashboard() {
     let netIncome = 0;
     let periodLabel = 'Sin datos';
     
+    // Variables para almacenar totales agregados del mes
+    let totalBrutoMes = 0;
+    let totalSSMes = 0;
+    let totalIRPFMes = 0;
+    let totalNetoMes = 0;
+    let nominasCount = 0;
+    
     if (selectedValue === 'current') {
         // Buscar la nómina más reciente del año seleccionado
-        const yearRecords = data.filter(r => r.year === selectedYear);
+        const yearRecords = data.filter(r => parseInt(r.year) === selectedYear);
         if (yearRecords.length > 0) {
             // Ordenar por mes descendente y tomar la más reciente
-            yearRecords.sort((a, b) => b.month - a.month);
-            const latestRecord = yearRecords[0];
-            netIncome = latestRecord.totalNeto || 0;
-            periodLabel = `${months[latestRecord.month - 1]} ${latestRecord.year}`;
+            yearRecords.sort((a, b) => parseInt(b.month) - parseInt(a.month));
+            const latestMonth = parseInt(yearRecords[0].month);
+            
+            // AGREGAR: Sumar TODAS las nóminas del mes más reciente
+            const nominasDelMes = yearRecords.filter(r => parseInt(r.month) === latestMonth);
+            nominasDelMes.forEach(nomina => {
+                totalBrutoMes += nomina.totalBruto || 0;
+                totalSSMes += nomina.ssAmount || 0;
+                totalIRPFMes += nomina.irpfAmount || 0;
+                totalNetoMes += nomina.totalNeto || 0;
+                nominasCount++;
+            });
+            
+            netIncome = totalNetoMes;
+            periodLabel = `${months[latestMonth - 1]} ${selectedYear}`;
+            if (nominasCount > 1) {
+                periodLabel += ` (${nominasCount} nóminas)`;
+            }
         } else {
             // Si no hay nóminas del año, intentar leer del formulario actual
             const netoElement = document.getElementById('total-neto');
@@ -2091,12 +2122,34 @@ function updateDashboard() {
         // Graceful handling cuando no hay valor o es vacío
         netIncome = 0;
         periodLabel = 'Sin registros';
+    } else if (selectedValue.startsWith('month-')) {
+        // NUEVO: Formato "month-X" - Agregar todas las nóminas del mes X
+        const monthNum = parseInt(selectedValue.replace('month-', ''));
+        const yearRecords = data.filter(r => parseInt(r.year) === selectedYear);
+        const nominasDelMes = yearRecords.filter(r => parseInt(r.month) === monthNum);
+        
+        // Sumar TODAS las nóminas del mes seleccionado
+        nominasDelMes.forEach(nomina => {
+            totalBrutoMes += nomina.totalBruto || 0;
+            totalSSMes += nomina.ssAmount || 0;
+            totalIRPFMes += nomina.irpfAmount || 0;
+            totalNetoMes += nomina.totalNeto || 0;
+            nominasCount++;
+        });
+        
+        netIncome = totalNetoMes;
+        periodLabel = `${months[monthNum - 1]} ${selectedYear}`;
+        if (nominasCount > 1) {
+            periodLabel += ` (${nominasCount} nóminas)`;
+        }
+        
+        console.log(`Dashboard Agregación - Mes ${monthNum}: ${nominasCount} nóminas, Bruto: ${totalBrutoMes}, SS: ${totalSSMes}, IRPF: ${totalIRPFMes}, Neto: ${totalNetoMes}`);
     } else {
-        // Find the record by ID
+        // LEGACY: Soporte para IDs antiguos (por si acaso quedan referencias)
         const record = data.find(r => r.id === selectedValue);
         if (record) {
             netIncome = record.totalNeto || 0;
-            periodLabel = `${months[record.month - 1]} ${record.year}`;
+            periodLabel = `${months[parseInt(record.month) - 1]} ${record.year}`;
         }
     }
     
