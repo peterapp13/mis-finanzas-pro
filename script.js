@@ -1,4 +1,4 @@
-// Version: 2025-07-28-v87
+// Version: 2025-07-28-v88
 // ==================== DATA STORAGE ====================
 const STORAGE_KEY = 'mis-finanzas-pro-data';
 const BANKS_KEY = 'mis-finanzas-pro-banks';
@@ -2192,7 +2192,8 @@ function updateDashboard() {
     renderDesgloseGastos();
     
     // Calculate Dinero Disponible (Necesidades libre + Ocio libre, EXCLUDING Ahorro)
-    const dineroDisponible = Math.max(0, necesidadesLibre) + Math.max(0, ocioLibre);
+    // v88: Suma directa para que los excesos (negativos) resten del disponible
+    const dineroDisponible = necesidadesLibre + ocioLibre;
     document.getElementById('dashboard-available-money').textContent = formatCurrency(dineroDisponible);
     
     // Update bank breakdown
